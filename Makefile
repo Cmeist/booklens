@@ -1,4 +1,4 @@
-.PHONY: check-env pipeline-demo status
+.PHONY: check-env pipeline-demo web-dev web-build status
 
 check-env:
 	@echo "Checking tool paths..."
@@ -10,6 +10,12 @@ check-env:
 
 pipeline-demo:
 	uv run python scripts/run_pipeline.py
+
+web-dev:
+	cd apps/web && npm run dev
+
+web-build:
+	cd apps/web && npm run build
 
 status:
 	git status
