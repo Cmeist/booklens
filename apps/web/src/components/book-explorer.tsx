@@ -7,42 +7,50 @@ import {
   BookDetailPanel,
   BookListCard,
 } from "@/components/book-lens-shell";
+import { ActiveFilterChips, FilterControls } from "@/components/filter-controls";
 import {
   books,
-  getBookById,
   getRecommendationsWithBooks,
   topTags,
 } from "@/lib/data";
+import {
+  clearFilterChip,
+  defaultBookFilters,
+  filterBooks,
+  getDecadeOptions,
+  type BookFilters,
+} from "@/lib/filters";
 
 export function BookExplorer() {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [filters, setFilters] = useState<BookFilters>(defaultBookFilters);
   const [selectedBookId, setSelectedBookId] = useState(books[0]?.id ?? "");
-  const [activeTag, setActiveTag] = useState<string | null>(null);
 
-  const visibleBooks = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
+  const decadeOptions = useMemo(() => getDecadeOptions(books), []);
 
-    return books.filter((book) => {
-      const matchesSearch =
-        query.length === 0 ||
-        book.title.toLowerCase().includes(query) ||
-        book.author.toLowerCase().includes(query) ||
-        book.description.toLowerCase().includes(query) ||
-        book.tags.some((tag) => tag.toLowerCase().includes(query));
+  const visibleBooks = useMemo(() => filterBooks(books, filters), [filters]);
 
-      const matchesTag =
-        activeTag === null || book.tags.some((tag) => tag.toLowerCase() === activeTag);
-
-      return matchesSearch && matchesTag;
-    });
-  }, [activeTag, searchQuery]);
-
-  const selectedBook =
-    getBookById(selectedBookId) ?? getBookById(visibleBooks[0]?.id ?? "") ?? books[0];
+  const selectedBook = useMemo(() => {
+    if (visibleBooks.length === 0) {
+      return undefined;
+    }
+    return visibleBooks.find((book) => book.id === selectedBookId) ?? visibleBooks[0];
+  }, [visibleBooks, selectedBookId]);
 
   const recommendationPairs = selectedBook
     ? getRecommendationsWithBooks(selectedBook.id)
     : [];
+
+  function updateFilters(next: BookFilters) {
+    setFilters(next);
+  }
+
+  function setTagFilter(tag: string | null) {
+    setFilters((current) => ({ ...current, tag }));
+  }
+
+  function clearChip(key: Parameters<typeof clearFilterChip>[1]) {
+    setFilters((current) => clearFilterChip(current, key));
+  }
 
   return (
     <div className="min-h-full bg-[#f4f1ea] text-slate-900">
@@ -57,8 +65,7 @@ export function BookExplorer() {
                 Book explorer
               </h1>
               <p className="mt-1 max-w-2xl text-sm text-slate-600">
-                Search, inspect metadata, and review explainable recommendations from the sample
-                dataset.
+                Search, filter, and inspect explainable recommendations from the sample dataset.
               </p>
             </div>
             <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
@@ -66,42 +73,17 @@ export function BookExplorer() {
             </div>
           </div>
 
-          <div className="grid gap-3 lg:grid-cols-[1.4fr_repeat(3,minmax(0,1fr))]">
-            <label className="block">
-              <span className="sr-only">Search books</span>
-              <input
-                type="search"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search title, author, description, or tags"
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm outline-none ring-teal-500 placeholder:text-slate-400 focus:ring-2"
-              />
-            </label>
-            <select
-              disabled
-              aria-label="Decade filter placeholder"
-              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500"
-              defaultValue=""
-            >
-              <option value="">Decade (Phase 4)</option>
-            </select>
-            <select
-              disabled
-              aria-label="Minimum rating filter placeholder"
-              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500"
-              defaultValue=""
-            >
-              <option value="">Min rating (Phase 4)</option>
-            </select>
-            <select
-              disabled
-              aria-label="Page count filter placeholder"
-              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500"
-              defaultValue=""
-            >
-              <option value="">Page count (Phase 4)</option>
-            </select>
-          </div>
+          <FilterControls
+            filters={filters}
+            decadeOptions={decadeOptions}
+            onChange={updateFilters}
+          />
+
+          <ActiveFilterChips
+            filters={filters}
+            onClearChip={clearChip}
+            onClearAll={() => setFilters(defaultBookFilters)}
+          />
 
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -110,9 +92,9 @@ export function BookExplorer() {
             <div className="mt-2 flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={() => setActiveTag(null)}
+                onClick={() => setTagFilter(null)}
                 className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                  activeTag === null
+                  filters.tag === null
                     ? "bg-slate-900 text-white"
                     : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
                 }`}
@@ -124,10 +106,10 @@ export function BookExplorer() {
                   key={item.tag}
                   type="button"
                   onClick={() =>
-                    setActiveTag((current) => (current === item.tag ? null : item.tag))
+                    setTagFilter(filters.tag === item.tag ? null : item.tag)
                   }
                   className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                    activeTag === item.tag
+                    filters.tag === item.tag
                       ? "bg-teal-700 text-white"
                       : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
                   }`}
@@ -145,15 +127,6 @@ export function BookExplorer() {
         <section aria-label="Book results">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-slate-900">Results</h2>
-            {activeTag ? (
-              <button
-                type="button"
-                onClick={() => setActiveTag(null)}
-                className="text-xs font-medium text-teal-700 hover:text-teal-800"
-              >
-                Clear tag: {activeTag}
-              </button>
-            ) : null}
           </div>
 
           {visibleBooks.length > 0 ? (
@@ -169,10 +142,17 @@ export function BookExplorer() {
             </div>
           ) : (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center">
-              <p className="text-sm font-medium text-slate-900">No books match this view.</p>
+              <p className="text-sm font-medium text-slate-900">No books match these filters.</p>
               <p className="mt-1 text-sm text-slate-600">
-                Try clearing the search or tag filter.
+                Try removing a filter chip or clearing all filters to restore the full list.
               </p>
+              <button
+                type="button"
+                onClick={() => setFilters(defaultBookFilters)}
+                className="mt-4 rounded-full bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800"
+              >
+                Clear all filters
+              </button>
             </div>
           )}
         </section>
