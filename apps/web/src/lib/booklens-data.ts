@@ -55,16 +55,21 @@ export function getRecommendationsForBook(
     .sort((left, right) => right.score - left.score);
 }
 
+const MAX_RECOMMENDATIONS = 5;
+
 export function getRecommendationsWithBooks(
   books: Book[],
   recommendations: BookRecommendation[],
   bookId: string,
 ): RecommendationWithBook[] {
-  return getRecommendationsForBook(recommendations, bookId).flatMap((recommendation) => {
-    const book = getBookById(books, recommendation.similarBookId);
-    if (!book) {
-      return [];
-    }
-    return [{ recommendation, book }];
-  });
+  return getRecommendationsForBook(recommendations, bookId)
+    .filter((recommendation) => recommendation.similarBookId !== bookId)
+    .flatMap((recommendation) => {
+      const book = getBookById(books, recommendation.similarBookId);
+      if (!book) {
+        return [];
+      }
+      return [{ recommendation, book }];
+    })
+    .slice(0, MAX_RECOMMENDATIONS);
 }

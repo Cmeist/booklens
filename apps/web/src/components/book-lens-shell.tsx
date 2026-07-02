@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import {
   formatPageCount,
   formatRating,
@@ -71,12 +73,14 @@ function MetadataItem({ label, value }: { label: string; value: string }) {
 function RecommendationCard({
   book,
   recommendation,
+  href,
 }: {
   book: Book;
   recommendation: BookRecommendation;
+  href?: string;
 }) {
-  return (
-    <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+  const content = (
+    <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:border-slate-300">
       <div className="flex gap-3">
         <BookCover book={book} size="sm" />
         <div className="min-w-0 flex-1">
@@ -96,74 +100,80 @@ function RecommendationCard({
       </div>
     </article>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className="block">
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
 }
 
-function BookListCard({
-  book,
-  selected,
-  onSelect,
+function SimilarBooksSection({
+  recommendationPairs,
+  linkToDetail = false,
 }: {
-  book: Book;
-  selected: boolean;
-  onSelect: (id: string) => void;
+  recommendationPairs: RecommendationWithBook[];
+  linkToDetail?: boolean;
 }) {
   return (
-    <button
-      type="button"
-      onClick={() => onSelect(book.id)}
-      className={`w-full rounded-xl border p-4 text-left transition-colors ${
-        selected
-          ? "border-teal-500 bg-teal-50/60 shadow-sm ring-1 ring-teal-200"
-          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
-      }`}
-    >
-      <div className="flex gap-3">
-        <BookCover book={book} size="sm" />
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-semibold text-slate-900">{book.title}</h3>
-          <p className="text-xs text-slate-600">{book.author}</p>
-          <div className="mt-2 flex flex-wrap gap-1">
-            {book.tags.slice(0, 3).map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-          <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-slate-500">
-            {book.description}
-          </p>
-          <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-slate-500">
-            <span>{formatYear(book.publicationYear, book.decade)}</span>
-            <span>{formatPageCount(book.pageCount)}</span>
-            <span>
-              {formatRating(book.averageRating)} · {formatRatingCount(book.ratingCount)}
-            </span>
-          </div>
-        </div>
+    <div>
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold text-slate-900">Similar books</h3>
+        <span className="text-xs text-slate-500">{recommendationPairs.length} matches</span>
       </div>
-    </button>
+      <div className="mt-3 space-y-3">
+        {recommendationPairs.length > 0 ? (
+          recommendationPairs.map(({ recommendation, book: recommendedBook }) => (
+            <RecommendationCard
+              key={recommendation.similarBookId}
+              book={recommendedBook}
+              recommendation={recommendation}
+              href={linkToDetail ? `/books/${recommendedBook.id}` : undefined}
+            />
+          ))
+        ) : (
+          <p className="rounded-lg bg-slate-50 px-3 py-4 text-sm text-slate-500">
+            No recommendations available for this book yet.
+          </p>
+        )}
+      </div>
+    </div>
   );
 }
 
-function BookDetailPanel({
+function BookDetailContent({
   book,
   recommendationPairs,
+  mode = "preview",
 }: {
   book: Book;
   recommendationPairs: RecommendationWithBook[];
+  mode?: "preview" | "page";
 }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-6">
-      <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">
-        Selected book
-      </p>
-      <div className="mt-4 flex gap-4">
+    <>
+      {mode === "preview" ? (
+        <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">
+          Selected book
+        </p>
+      ) : null}
+
+      <div className={`flex gap-4 ${mode === "preview" ? "mt-4" : "mt-2"}`}>
         <BookCover book={book} size="lg" />
         <div className="min-w-0 flex-1">
-          <h2 className="text-xl font-semibold text-slate-900">{book.title}</h2>
+          <h2
+            className={
+              mode === "page"
+                ? "text-2xl font-semibold text-slate-900 sm:text-3xl"
+                : "text-xl font-semibold text-slate-900"
+            }
+          >
+            {book.title}
+          </h2>
           <p className="mt-1 text-sm text-slate-600">{book.author}</p>
           <div className="mt-3 flex flex-wrap gap-1.5">
             {book.tags.map((tag) => (
@@ -187,31 +197,106 @@ function BookDetailPanel({
         <MetadataItem label="Popularity" value={formatRatingCount(book.ratingCount)} />
       </dl>
 
+      {mode === "page" ? (
+        <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <MetadataItem label="Source" value={book.source} />
+          <MetadataItem label="Source ID" value={book.sourceId} />
+        </dl>
+      ) : null}
+
       <div className="mt-6">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold text-slate-900">Similar books</h3>
-          <span className="text-xs text-slate-500">{recommendationPairs.length} matches</span>
-        </div>
-        <div className="mt-3 space-y-3">
-          {recommendationPairs.length > 0 ? (
-            recommendationPairs.map(({ recommendation, book: recommendedBook }) => (
-              <RecommendationCard
-                key={recommendation.similarBookId}
-                book={recommendedBook}
-                recommendation={recommendation}
-              />
-            ))
-          ) : (
-            <p className="rounded-lg bg-slate-50 px-3 py-4 text-sm text-slate-500">
-              No recommendations available for this book yet.
-            </p>
-          )}
-        </div>
+        <SimilarBooksSection
+          recommendationPairs={recommendationPairs}
+          linkToDetail={mode === "page"}
+        />
       </div>
 
-      <p className="mt-5 text-xs text-slate-400">
-        Book detail routes arrive in a later phase. Selection preview is interactive here.
-      </p>
+      {mode === "preview" ? (
+        <div className="mt-5 space-y-2">
+          <Link
+            href={`/books/${book.id}`}
+            className="inline-flex text-sm font-medium text-teal-700 hover:text-teal-800"
+          >
+            Open full detail page →
+          </Link>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function BookListCard({
+  book,
+  selected,
+  onSelect,
+}: {
+  book: Book;
+  selected: boolean;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <article
+      className={`w-full rounded-xl border p-4 transition-colors ${
+        selected
+          ? "border-teal-500 bg-teal-50/60 shadow-sm ring-1 ring-teal-200"
+          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+      }`}
+    >
+      <div className="flex gap-3">
+        <button type="button" onClick={() => onSelect(book.id)} className="flex min-w-0 flex-1 gap-3 text-left">
+          <BookCover book={book} size="sm" />
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate text-sm font-semibold text-slate-900">{book.title}</h3>
+            <p className="text-xs text-slate-600">{book.author}</p>
+            <div className="mt-2 flex flex-wrap gap-1">
+              {book.tags.slice(0, 3).map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+            <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-slate-500">
+              {book.description}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-slate-500">
+              <span>{formatYear(book.publicationYear, book.decade)}</span>
+              <span>{formatPageCount(book.pageCount)}</span>
+              <span>
+                {formatRating(book.averageRating)} · {formatRatingCount(book.ratingCount)}
+              </span>
+            </div>
+          </div>
+        </button>
+      </div>
+      <div className="mt-3 flex justify-end">
+        <Link
+          href={`/books/${book.id}`}
+          className="text-xs font-medium text-teal-700 hover:text-teal-800"
+        >
+          Open detail page
+        </Link>
+      </div>
+    </article>
+  );
+}
+
+function BookDetailPanel({
+  book,
+  recommendationPairs,
+}: {
+  book: Book;
+  recommendationPairs: RecommendationWithBook[];
+}) {
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-6">
+      <BookDetailContent
+        book={book}
+        recommendationPairs={recommendationPairs}
+        mode="preview"
+      />
     </section>
   );
 }
@@ -334,6 +419,7 @@ function AnalyticsPreview({
 
 export {
   AnalyticsPreview,
+  BookDetailContent,
   BookDetailPanel,
   BookListCard,
   ReasonChips,
