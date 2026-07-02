@@ -1,0 +1,30 @@
+[
+  {
+    "tag": "classics",
+    "bookCount": 4
+  },
+  {
+    "tag": "science fiction",
+    "bookCount": 2
+  },
+  {
+    "tag": "literary fiction",
+    "bookCount": 2
+  },
+  {
+    "tag": "politics",
+    "bookCount": 1
+  },
+  {
+    "tag": "romance",
+    "bookCount": 1
+  },
+  {
+    "tag": "fantasy",
+    "bookCount": 1
+  },
+  {
+    "tag": "adventure",
+    "bookCount": 1
+  }
+]

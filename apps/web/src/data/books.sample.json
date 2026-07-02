@@ -1,0 +1,78 @@
+[
+  {
+    "id": "99afb55d528e0d0f",
+    "title": "Dune",
+    "author": "Frank Herbert",
+    "description": "A science fiction epic about politics, ecology, religion, and power on the desert planet Arrakis.",
+    "tags": [
+      "science fiction",
+      "classics",
+      "politics"
+    ],
+    "publicationYear": 1965,
+    "decade": "1960s",
+    "pageCount": 688,
+    "ratingCount": 1300000,
+    "averageRating": 4.27,
+    "coverUrl": null,
+    "source": "demo",
+    "sourceId": "dune"
+  },
+  {
+    "id": "56975a8e7562fc5e",
+    "title": "Pride and Prejudice",
+    "author": "Jane Austen",
+    "description": "A classic romance and social comedy about manners, family, class, and misunderstanding.",
+    "tags": [
+      "classics",
+      "romance",
+      "literary fiction"
+    ],
+    "publicationYear": 1813,
+    "decade": "1810s",
+    "pageCount": 279,
+    "ratingCount": 4100000,
+    "averageRating": 4.29,
+    "coverUrl": null,
+    "source": "demo",
+    "sourceId": "pride-and-prejudice"
+  },
+  {
+    "id": "3a287e49ae30be90",
+    "title": "The Hobbit",
+    "author": "J.R.R. Tolkien",
+    "description": "A fantasy adventure about Bilbo Baggins, a reluctant hobbit who joins a quest involving dwarves, treasure, and a dragon.",
+    "tags": [
+      "fantasy",
+      "adventure",
+      "classics"
+    ],
+    "publicationYear": 1937,
+    "decade": "1930s",
+    "pageCount": 310,
+    "ratingCount": 4200000,
+    "averageRating": 4.28,
+    "coverUrl": null,
+    "source": "demo",
+    "sourceId": "the-hobbit"
+  },
+  {
+    "id": "b39eb765a5842ff5",
+    "title": "The Left Hand of Darkness",
+    "author": "Ursula K. Le Guin",
+    "description": "A science fiction novel exploring gender, politics, culture, and human connection on a distant planet.",
+    "tags": [
+      "science fiction",
+      "literary fiction",
+      "classics"
+    ],
+    "publicationYear": 1969,
+    "decade": "1960s",
+    "pageCount": 304,
+    "ratingCount": 190000,
+    "averageRating": 4.1,
+    "coverUrl": null,
+    "source": "demo",
+    "sourceId": "the-left-hand-of-darkness"
+  }
+]

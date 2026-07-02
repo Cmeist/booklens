@@ -1,0 +1,116 @@
+[
+  {
+    "bookId": "99afb55d528e0d0f",
+    "similarBookId": "b39eb765a5842ff5",
+    "score": 0.3897,
+    "reasons": [
+      "Shared tag",
+      "Similar description",
+      "Same publication era",
+      "Similar rating profile"
+    ]
+  },
+  {
+    "bookId": "99afb55d528e0d0f",
+    "similarBookId": "56975a8e7562fc5e",
+    "score": 0.11,
+    "reasons": [
+      "Shared tag",
+      "Similar rating profile"
+    ]
+  },
+  {
+    "bookId": "99afb55d528e0d0f",
+    "similarBookId": "3a287e49ae30be90",
+    "score": 0.11,
+    "reasons": [
+      "Shared tag",
+      "Similar rating profile"
+    ]
+  },
+  {
+    "bookId": "56975a8e7562fc5e",
+    "similarBookId": "b39eb765a5842ff5",
+    "score": 0.185,
+    "reasons": [
+      "Shared tag",
+      "Similar length"
+    ]
+  },
+  {
+    "bookId": "56975a8e7562fc5e",
+    "similarBookId": "3a287e49ae30be90",
+    "score": 0.17,
+    "reasons": [
+      "Shared tag",
+      "Similar length",
+      "Similar rating profile"
+    ]
+  },
+  {
+    "bookId": "56975a8e7562fc5e",
+    "similarBookId": "99afb55d528e0d0f",
+    "score": 0.11,
+    "reasons": [
+      "Shared tag",
+      "Similar rating profile"
+    ]
+  },
+  {
+    "bookId": "3a287e49ae30be90",
+    "similarBookId": "56975a8e7562fc5e",
+    "score": 0.17,
+    "reasons": [
+      "Shared tag",
+      "Similar length",
+      "Similar rating profile"
+    ]
+  },
+  {
+    "bookId": "3a287e49ae30be90",
+    "similarBookId": "99afb55d528e0d0f",
+    "score": 0.11,
+    "reasons": [
+      "Shared tag",
+      "Similar rating profile"
+    ]
+  },
+  {
+    "bookId": "3a287e49ae30be90",
+    "similarBookId": "b39eb765a5842ff5",
+    "score": 0.11,
+    "reasons": [
+      "Shared tag",
+      "Similar length"
+    ]
+  },
+  {
+    "bookId": "b39eb765a5842ff5",
+    "similarBookId": "99afb55d528e0d0f",
+    "score": 0.3897,
+    "reasons": [
+      "Shared tag",
+      "Similar description",
+      "Same publication era",
+      "Similar rating profile"
+    ]
+  },
+  {
+    "bookId": "b39eb765a5842ff5",
+    "similarBookId": "56975a8e7562fc5e",
+    "score": 0.185,
+    "reasons": [
+      "Shared tag",
+      "Similar length"
+    ]
+  },
+  {
+    "bookId": "b39eb765a5842ff5",
+    "similarBookId": "3a287e49ae30be90",
+    "score": 0.11,
+    "reasons": [
+      "Shared tag",
+      "Similar length"
+    ]
+  }
+]
