@@ -9,9 +9,8 @@ import {
 } from "@/components/book-lens-shell";
 import { ActiveFilterChips, FilterControls } from "@/components/filter-controls";
 import {
-  books,
   getRecommendationsWithBooks,
-  topTags,
+  type BookLensData,
 } from "@/lib/data";
 import {
   clearFilterChip,
@@ -21,13 +20,19 @@ import {
   type BookFilters,
 } from "@/lib/filters";
 
-export function BookExplorer() {
+type BookExplorerProps = {
+  data: BookLensData;
+  loadWarning?: string;
+};
+
+export function BookExplorer({ data, loadWarning }: BookExplorerProps) {
+  const { books, topTags, recommendations, source } = data;
   const [filters, setFilters] = useState<BookFilters>(defaultBookFilters);
   const [selectedBookId, setSelectedBookId] = useState(books[0]?.id ?? "");
 
-  const decadeOptions = useMemo(() => getDecadeOptions(books), []);
+  const decadeOptions = useMemo(() => getDecadeOptions(books), [books]);
 
-  const visibleBooks = useMemo(() => filterBooks(books, filters), [filters]);
+  const visibleBooks = useMemo(() => filterBooks(books, filters), [books, filters]);
 
   const selectedBook = useMemo(() => {
     if (visibleBooks.length === 0) {
@@ -37,7 +42,7 @@ export function BookExplorer() {
   }, [visibleBooks, selectedBookId]);
 
   const recommendationPairs = selectedBook
-    ? getRecommendationsWithBooks(selectedBook.id)
+    ? getRecommendationsWithBooks(books, recommendations, selectedBook.id)
     : [];
 
   function updateFilters(next: BookFilters) {
@@ -52,8 +57,16 @@ export function BookExplorer() {
     setFilters((current) => clearFilterChip(current, key));
   }
 
+  const dataSourceLabel = source === "supabase" ? "Supabase" : "Sample fixture";
+
   return (
     <div className="min-h-full bg-[#f4f1ea] text-slate-900">
+      {loadWarning ? (
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:px-6 lg:px-8">
+          {loadWarning}
+        </div>
+      ) : null}
+
       <header className="border-b border-slate-200/80 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-5 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -65,11 +78,17 @@ export function BookExplorer() {
                 Book explorer
               </h1>
               <p className="mt-1 max-w-2xl text-sm text-slate-600">
-                Search, filter, and inspect explainable recommendations from the sample dataset.
+                Search, filter, and inspect explainable recommendations from the{" "}
+                {dataSourceLabel.toLowerCase()} dataset.
               </p>
             </div>
-            <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-              {visibleBooks.length} of {books.length} books shown
+            <div className="flex flex-wrap gap-2">
+              <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                {visibleBooks.length} of {books.length} books shown
+              </div>
+              <div className="rounded-full bg-teal-50 px-3 py-1 text-xs font-medium text-teal-800 ring-1 ring-teal-100">
+                Data: {dataSourceLabel}
+              </div>
             </div>
           </div>
 
