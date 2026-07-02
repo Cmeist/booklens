@@ -2,26 +2,37 @@
 
 ## Current Goal
 
-Build the smallest polished BookLens MVP that proves the portfolio concept:
+Build BookLens as a polished Supabase-backed book discovery and recommendation app:
 
 - A deterministic Python data pipeline
-- A clean static-data contract for the web app
-- A useful Next.js explorer/detail/analytics experience
+- A Supabase Postgres database as the app data layer
+- A Next.js frontend that reads book, tag, recommendation, and analytics data from Supabase
 - Explainable similar-book recommendations
-- No FastAPI, Modal, Supabase, auth, or LiteLLM yet
+- A deployment-ready Vercel + Supabase structure
 
-This repo already has a Python project, a minimal Next.js app in `apps/web`, and starter scripts in `scripts`. Cursor Composer should improve those pieces rather than introduce a new architecture.
+This repo already has:
+
+- WSL/Cursor setup docs
+- A Python data pipeline
+- Open Library collection support
+- Sample JSON fixtures
+- A Next.js explorer shell
+- Client-side filtering
+
+The plan is changing from a static-data MVP to a Supabase-backed MVP. Keep the existing static fixture as a local fallback and development safety net, but make Supabase the intended production data source.
 
 ## Non-Goals For This Pass
 
-Do not add these unless a later plan explicitly asks for them:
+Supabase is now in scope. These remain out of scope unless a later plan explicitly adds them:
 
 - FastAPI backend
 - Modal deployment
-- Supabase database, auth, storage, or migrations
 - LiteLLM or model-provider integrations
+- Supabase Auth
+- Supabase Storage
 - User accounts, saved lists, comments, reviews, or social features
-- Large committed datasets
+- Client-side writes to production tables
+- Exposing service-role keys, database URLs, or other server-only secrets to browser code
 
 ## Current Repo State
 
@@ -29,24 +40,46 @@ Important existing files:
 
 - `docs/DESIGN.md`: product/design source of truth
 - `docs/LOCAL_DEV_WSL_CURSOR.md`: local environment guidance
-- `pyproject.toml`: Python dependencies already include pandas, requests, scikit-learn, python-dotenv, and ruff
-- `scripts/run_pipeline.py`: demo pipeline that currently writes sample CSV outputs
+- `pyproject.toml`: Python dependencies include pandas, requests, scikit-learn, python-dotenv, and ruff
+- `scripts/run_pipeline.py`: cleans data, computes recommendations, and exports processed CSV + sample JSON
 - `scripts/collect_openlibrary.py`: Open Library collector that writes raw CSV data
-- `apps/web`: Next.js + TypeScript app created from the starter template
-- `.gitignore`: already excludes `.env`, `.venv`, `node_modules`, `.next`, and generated `data/raw` / `data/processed`
+- `apps/web`: Next.js + TypeScript app
+- `apps/web/src/data/*.sample.json`: committed sample fixture
+- `apps/web/src/lib/data.ts`: current static fixture data helpers
+- `apps/web/src/lib/filters.ts`: client-side filtering helpers
+- `.gitignore`: excludes `.env`, `.venv`, `node_modules`, `.next`, and generated `data/raw` / `data/processed`
 
-Known gap: `scripts/collect_openlibrary.py` collects raw Open Library rows, but `scripts/run_pipeline.py` does not yet clean that live raw data or produce web-ready JSON/recommendations.
+Known gap: the app currently reads committed JSON fixtures, not Supabase.
 
 ## Architecture Decision
 
-Use a static-data MVP:
+Use a Supabase-backed MVP:
 
 1. Python scripts collect and process book data.
-2. The pipeline exports a small committed frontend fixture for the deployed demo.
-3. The Next.js app imports that fixture directly and renders the app.
-4. Similarity is precomputed by Python and stored with simple explanation reasons.
+2. The pipeline continues to write local processed CSV/JSON outputs for reproducibility.
+3. A seed/import workflow loads clean book, tag, and recommendation data into Supabase Postgres.
+4. The Next.js app reads public book discovery data from Supabase.
+5. Similarity remains precomputed by Python and stored in Supabase.
+6. The committed sample JSON remains as a local fallback for development and tests.
 
-This keeps the Vercel deployment simple and avoids needing a database or API server.
+Do not add FastAPI yet. Next.js can read public data directly from Supabase using the anon key and read-only RLS policies. If later server-only queries or protected writes become necessary, revisit API/server actions then.
+
+## Supabase Scope
+
+Use Supabase for:
+
+- Postgres tables
+- SQL migrations checked into the repo
+- Public read-only data access from the frontend
+- Seed/import scripts for local and hosted Supabase projects
+
+Do not use Supabase for this pass:
+
+- Auth
+- Storage
+- Realtime
+- Edge Functions
+- User-generated content
 
 ## Data Policy
 
@@ -54,19 +87,19 @@ Generated data stays out of Git by default:
 
 - Keep `data/raw/` ignored.
 - Keep `data/processed/` ignored.
-- Commit only a small curated web fixture under `apps/web/src/data/`.
+- Keep the small committed fixture under `apps/web/src/data/` as fallback data.
 
-Recommended committed fixture files:
+Supabase schema changes must be committed as SQL migrations. Do not rely on ad hoc dashboard-only schema edits as the source of truth.
 
-- `apps/web/src/data/books.sample.json`
-- `apps/web/src/data/top-tags.sample.json`
-- `apps/web/src/data/recommendations.sample.json`
+Recommended committed Supabase files:
 
-The fixture should be small enough for portfolio/demo use, roughly 50-200 books. If live collection produces sparse metadata, prefer a smaller but cleaner dataset over a larger noisy one.
+- `supabase/migrations/*.sql`
+- `supabase/README.md`
+- optional seed SQL or documented seed command
 
 ## Data Contract
 
-All frontend book records should use this shape:
+The frontend should continue exposing this TypeScript shape even if Supabase uses snake_case columns:
 
 ```ts
 export type Book = {
@@ -106,7 +139,7 @@ export type TopTag = {
 };
 ```
 
-Reason labels should be short and user-facing:
+Reason labels should stay short and user-facing:
 
 - `Shared tag`
 - `Similar description`
@@ -115,133 +148,158 @@ Reason labels should be short and user-facing:
 - `Similar length`
 - `Similar rating profile`
 
+## Recommended Supabase Schema
+
+Use SQL migrations. Names can change if implementation discovers a better local convention, but keep the data model simple.
+
+### `books`
+
+- `id text primary key`
+- `title text not null`
+- `author text not null`
+- `description text not null default ''`
+- `publication_year integer`
+- `decade text`
+- `page_count integer`
+- `rating_count integer`
+- `average_rating numeric(4, 2)`
+- `cover_url text`
+- `source text not null`
+- `source_id text not null`
+- `created_at timestamptz not null default now()`
+- `updated_at timestamptz not null default now()`
+
+Suggested constraints:
+
+- publication year is null or within a plausible range
+- page count is null or positive
+- average rating is null or between 0 and 5
+- rating count is null or non-negative
+- unique `(source, source_id)`
+
+### `book_tags`
+
+- `book_id text not null references books(id) on delete cascade`
+- `tag text not null`
+- primary key `(book_id, tag)`
+
+Suggested index:
+
+- `(tag)`
+
+### `book_recommendations`
+
+- `book_id text not null references books(id) on delete cascade`
+- `similar_book_id text not null references books(id) on delete cascade`
+- `score numeric(7, 4) not null`
+- `reasons text[] not null default '{}'`
+- primary key `(book_id, similar_book_id)`
+
+Suggested constraints:
+
+- `book_id <> similar_book_id`
+- score is non-negative
+
+### Views
+
+Create read-friendly views for the frontend:
+
+- `books_with_tags`: one row per book with `tags text[]`
+- `top_tags`: tag counts sorted by popularity
+
+Optional later:
+
+- `recommendations_with_books`: joined recommendation rows for detail pages
+
+### RLS
+
+Enable row-level security on tables and add public read policies for anon users:
+
+- public can `select` books
+- public can `select` book_tags
+- public can `select` book_recommendations
+
+Do not add public insert/update/delete policies.
+
 ## Implementation Phases For Cursor Composer
 
-### Phase 1: Tighten Local Docs And Commands
+Completed phases:
 
-Goal: make the project easy to run from WSL/Cursor.
+1. Tighten local docs and commands
+2. Build the data pipeline
+3. Replace the Next.js starter with the app shell
+4. Build client-side explorer filters
+
+### Phase 5: Supabase Foundation
+
+Goal: add Supabase schema, environment wiring, and a seed/import path without changing the user experience yet.
 
 Tasks:
 
-1. Expand `docs/LOCAL_DEV_WSL_CURSOR.md` into a complete checklist:
-   - confirm repo is under `~/dev/booklens`, not `/mnt/c/...`
-   - run `make check-env`
-   - install Python deps with `uv sync`
-   - install frontend deps from `apps/web` with `npm install`
-   - run `make pipeline-demo`
-   - run `make web-dev`
-   - run `make web-build`
-2. Update `README.md` with short setup and run commands.
-3. Keep all instructions WSL-first and avoid Windows tool paths.
+1. Add Supabase project structure:
+   - `supabase/migrations/`
+   - `supabase/README.md`
+2. Add SQL migration for:
+   - `books`
+   - `book_tags`
+   - `book_recommendations`
+   - `books_with_tags` view
+   - `top_tags` view
+   - read-only RLS policies
+3. Add or update environment docs:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - server-only `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_DB_URL` only for import scripts
+4. Add Supabase client dependency to `apps/web` only if the frontend begins using Supabase in this phase. Otherwise defer dependency install to Phase 6.
+5. Add a seed/import script that can load pipeline output into Supabase:
+   - either from `apps/web/src/data/*.sample.json`
+   - or from `data/processed/*.csv`
+6. The seed/import script must not require or expose secrets in browser code.
+7. Keep the current frontend reading static fixtures until Phase 6.
 
 Acceptance criteria:
 
-- A new contributor can follow docs from a fresh clone.
-- Docs mention that `.env` is local only and `.env.example` is safe to commit.
+- SQL migration is committed and reviewable.
+- Schema matches the frontend data contract.
+- RLS permits anonymous reads only.
+- Import/seed command is documented.
+- No service-role key or database URL is exposed to `NEXT_PUBLIC_*` variables.
+- Existing `npm run lint`, `npm run build`, and `make pipeline-demo` still pass.
 
-### Phase 2: Build The Data Pipeline
+### Phase 6: Frontend Supabase Reads
 
-Goal: create one reliable pipeline command that can use demo data or Open Library raw data and export frontend-ready fixtures.
+Goal: migrate the Next.js app from static JSON imports to Supabase reads while keeping fixture fallback available.
 
 Tasks:
 
-1. Refactor `scripts/run_pipeline.py` so it can:
-   - run with built-in demo data by default
-   - optionally read `data/raw/openlibrary_books.csv` when present or when a flag is passed
-   - normalize column names and value types
-   - convert semicolon-delimited tags into cleaned tag lists
-   - generate stable `id` values from source/source_id or title/author
-   - drop rows missing title or author
-   - keep rows with missing rating/page metadata, using `null` in JSON
-   - write `data/processed/books_clean.csv`
-   - write `data/processed/top_tags.csv`
-   - write `data/processed/recommendations.csv`
-   - write `data/processed/data_quality_report.txt`
-2. Add web export outputs:
-   - `apps/web/src/data/books.sample.json`
-   - `apps/web/src/data/top-tags.sample.json`
-   - `apps/web/src/data/recommendations.sample.json`
-3. Use scikit-learn TF-IDF on descriptions plus simple weighted metadata signals for similarity.
-4. Generate up to 5 similar books per book.
-5. Generate explanation reasons from actual feature overlap, not random labels.
-6. Keep network access only in `scripts/collect_openlibrary.py`; `scripts/run_pipeline.py` should be deterministic once raw data exists.
-
-Suggested similarity logic:
-
-- Description similarity: TF-IDF cosine similarity
-- Shared tags: Jaccard overlap
-- Same author: exact normalized author match
-- Same era: same decade
-- Similar length: page counts within roughly 15%
-- Similar rating profile: average rating within 0.25 and rating counts in a comparable order of magnitude
+1. Install `@supabase/supabase-js` in `apps/web`.
+2. Add a small Supabase browser/client helper.
+3. Replace or extend `apps/web/src/lib/data.ts` so it can fetch:
+   - books with tags
+   - top tags
+   - recommendations for a book
+4. Map Supabase snake_case rows into existing TypeScript types.
+5. Keep sample JSON fallback for local development when Supabase env vars are absent.
+6. Add loading, error, and empty states where needed.
+7. Preserve Phase 4 filter behavior.
 
 Acceptance criteria:
 
-- `make pipeline-demo` succeeds without network access.
-- The three `apps/web/src/data/*.sample.json` files are written and valid JSON.
-- Missing Open Library ratings/page counts do not crash the pipeline.
-- The quality report includes row count, missing-field counts, top tags, and number of recommendations.
+- App works against Supabase when env vars are configured.
+- App still works with sample fixtures when Supabase env vars are absent.
+- Browser only uses `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+- `npm run lint` and `npm run build` pass.
 
-### Phase 3: Replace The Next.js Starter With The App Shell
+### Phase 7: Book Detail And Recommendations
 
-Goal: remove the starter page and create a real BookLens first screen.
-
-Tasks:
-
-1. Create TypeScript data types, for example `apps/web/src/lib/types.ts`.
-2. Create data loading helpers, for example `apps/web/src/lib/data.ts`, that import the sample JSON fixture.
-3. Replace `apps/web/src/app/page.tsx` with the actual app:
-   - header/title area
-   - search input
-   - filter controls
-   - top tag bar
-   - book result list/grid
-   - selected-book detail panel or route link
-   - analytics section
-4. Avoid a marketing landing page. The first viewport should be the usable explorer.
-5. Keep the design polished but restrained, suitable for a data analytics portfolio project.
-
-Acceptance criteria:
-
-- No Next.js starter logo/copy remains.
-- The app works with only the committed sample JSON fixture.
-- `npm run lint` passes in `apps/web`.
-- `npm run build` passes in `apps/web`.
-
-### Phase 4: Book Explorer
-
-Goal: make browsing and filtering useful.
+Goal: make every book openable in a real detail experience backed by Supabase data.
 
 Tasks:
 
-1. Add client-side state for:
-   - text search across title, author, description, and tags
-   - tag filter
-   - decade/year filter
-   - page count range
-   - average rating minimum
-   - rating count minimum
-2. Show result count and active filter chips.
-3. Make top tags clickable and connected to the explorer filter.
-4. Handle null metadata gracefully with labels such as `Unknown year`, not broken UI.
-5. Ensure all filter controls work on mobile and desktop.
-
-Acceptance criteria:
-
-- Combining multiple filters narrows the list correctly.
-- Clearing filters restores the full list.
-- Empty states are helpful and do not look broken.
-
-### Phase 5: Book Detail And Recommendations
-
-Goal: make similar-book recommendations explainable.
-
-Tasks:
-
-1. Add a book detail experience using either:
-   - a dynamic route like `apps/web/src/app/books/[id]/page.tsx`, or
-   - an in-page selected book panel if that keeps the MVP simpler.
-2. Show:
+1. Add a dynamic route:
+   - `apps/web/src/app/books/[id]/page.tsx`
+2. Render detail data from Supabase with fixture fallback.
+3. Show:
    - cover when available
    - title
    - author
@@ -251,56 +309,61 @@ Tasks:
    - page count
    - rating count
    - average rating
-3. Show up to 5 similar books using `recommendations.sample.json`.
-4. Each recommendation card must include reason chips from the `reasons` array.
+   - source/source id in a restrained metadata area
+4. Show up to 5 similar books with reason chips.
+5. Link explorer cards to detail pages while preserving a good in-page preview experience if desired.
 
 Acceptance criteria:
 
-- Every book can be opened or selected.
+- Every book can be opened.
+- Unknown ids render `notFound()`.
 - Similar books never include the selected book itself.
 - Recommendation cards still look good with 1-2 reason chips and with 4-5 reason chips.
+- `npm run lint` and `npm run build` pass.
 
-### Phase 6: Analytics
+### Phase 8: Supabase-Backed Analytics
 
-Goal: add lightweight analytics without overbuilding.
+Goal: add useful analytics from Supabase data without overbuilding.
 
 Tasks:
 
-1. Add analytics from the sample fixture:
+1. Add analytics using Supabase data:
    - top tags
    - average rating by tag when enough rating data exists
    - publication year or decade distribution
    - page count vs average rating
    - rating count vs average rating
-2. Keep charts simple. Use CSS/SVG or add a small chart dependency only if it makes implementation clearly cleaner.
+2. Keep charts simple. Use CSS/SVG or add a small chart dependency only if it clearly improves implementation.
 3. Show unavailable-data states when Open Library fields are sparse.
 
 Acceptance criteria:
 
-- Analytics section renders with demo data.
-- Sparse live data does not produce misleading charts.
-- The charts support the portfolio story rather than overwhelming the explorer.
+- Analytics render from Supabase data.
+- Fixture fallback still works.
+- Sparse data does not produce misleading charts.
+- Charts support the portfolio story rather than overwhelming the explorer.
 
-### Phase 7: Polish And Verification
+### Phase 9: Polish, Deployment, And Verification
 
-Goal: make the MVP feel intentionally built.
+Goal: make the Supabase-backed MVP feel intentionally built and deployable.
 
 Tasks:
 
 1. Review spacing, typography, colors, responsive behavior, and empty states.
-2. Avoid a one-note palette. Keep the UI readable and professional.
-3. Add loading/error-safe UI only where it is relevant to the static app.
-4. Run validation commands:
+2. Verify the app with fixture fallback and Supabase env vars.
+3. Document Vercel environment variables.
+4. Document Supabase migration and seed workflow.
+5. Run validation commands:
    - `make pipeline-demo`
    - `uv run ruff check .`
    - `cd apps/web && npm run lint`
    - `cd apps/web && npm run build`
-5. Update docs if commands or file locations changed.
 
 Acceptance criteria:
 
 - All validation commands pass.
-- The app can be deployed to Vercel as a static Next.js app using committed fixture data.
+- Supabase migrations and seed/import workflow are documented.
+- App can deploy to Vercel using Supabase anon env vars.
 - No secrets or large generated datasets are committed.
 
 ## Cursor Composer Guardrails
@@ -309,8 +372,12 @@ When implementing:
 
 - Prefer small, coherent commits or change sets.
 - Follow the existing repo layout.
-- Do not create a backend folder yet.
-- Do not add database clients yet.
+- Use SQL migrations for schema changes.
+- Keep service-role keys and database URLs server-only.
+- Do not create a FastAPI backend yet.
+- Do not add Modal yet.
+- Do not add LiteLLM yet.
+- Do not add Supabase Auth or Storage yet.
 - Do not commit `.env` or generated `data/raw` / `data/processed` files.
 - Do not remove `.gitignore` protections for generated data.
 - Do not depend on Windows paths or Windows-installed Node/Python.
@@ -321,71 +388,60 @@ When implementing:
 
 Use one phase per Composer session. Keep the prompt narrow, then use the handoff template below so another reviewer can check the result before moving on.
 
-### Phase 1 Prompt
+### Phase 5 Prompt
 
 ```text
-You are implementing Phase 1 only from docs/PLAN.md for the BookLens project.
+Read docs/DESIGN.md and docs/PLAN.md. Implement Phase 5 only: Supabase Foundation.
 
-Before editing, read:
+Important:
+- Ignore booklens_repo_v4/. Do not read from it or copy code from it.
+- Stay within Phase 5. Do not migrate the frontend to Supabase reads yet unless docs/PLAN.md explicitly says to.
+- Do not add FastAPI, Modal, LiteLLM, Supabase Auth, Supabase Storage, user accounts, or backend services.
+- Do not expose service-role keys or database URLs to browser code.
+- Do not remove fixture JSON fallback files.
 
-- docs/DESIGN.md
+Before editing, inspect:
 - docs/PLAN.md
-- docs/LOCAL_DEV_WSL_CURSOR.md
-- README.md
-- Makefile
-- pyproject.toml
+- docs/DESIGN.md
+- .env.example
+- scripts/run_pipeline.py
+- apps/web/src/data/books.sample.json
+- apps/web/src/data/top-tags.sample.json
+- apps/web/src/data/recommendations.sample.json
 - apps/web/package.json
 
 Goal:
+Add the Supabase foundation: committed SQL migrations, clear env docs, and a safe seed/import workflow. Keep the current frontend behavior unchanged.
 
-Make the local development instructions clear, complete, and usable for a Windows 11 + WSL2 + Cursor workflow. This is a documentation/setup pass only.
-
-Scope:
-
-- Update README.md with concise project overview, repo structure, setup steps, common commands, and current MVP direction.
-- Expand docs/LOCAL_DEV_WSL_CURSOR.md into a complete local setup checklist.
-- Keep all instructions WSL-first.
-- Explain that the repo should live under a Linux path such as ~/dev/booklens, not /mnt/c/...
-- Explain how to confirm tool paths with make check-env.
-- Include Python setup with uv sync.
-- Include frontend setup from apps/web with npm install.
-- Include demo pipeline command with make pipeline-demo.
-- Include frontend dev/build commands with make web-dev and make web-build.
-- Mention that .env is local only, .env.example is safe to commit, and real secrets must never be committed.
-- Mention that generated data/raw and data/processed outputs are ignored by Git.
-- Keep references to FastAPI, Modal, Supabase, and LiteLLM as future-only/non-goals for this pass.
-
-Do not:
-
-- Do not implement pipeline logic.
-- Do not modify scripts/run_pipeline.py or scripts/collect_openlibrary.py.
-- Do not modify the Next.js UI.
-- Do not add dependencies.
-- Do not add backend services.
-- Do not add Supabase, Modal, FastAPI, or LiteLLM.
-- Do not remove .gitignore protections.
-- Do not commit generated data.
-
-Preferred files to edit:
-
-- README.md
-- docs/LOCAL_DEV_WSL_CURSOR.md
-
-Only edit docs/PLAN.md if you find a contradiction that would block Phase 1.
+Implement:
+1. Add `supabase/migrations/` with an initial SQL migration for:
+   - `books`
+   - `book_tags`
+   - `book_recommendations`
+   - `books_with_tags` view
+   - `top_tags` view
+   - read-only RLS policies for anon users
+2. Add `supabase/README.md` documenting:
+   - required local/hosted Supabase setup
+   - migration workflow
+   - seed/import workflow
+   - which env vars are public vs server-only
+3. Update `.env.example` if needed, using placeholders only.
+4. Add a seed/import script if feasible in this phase:
+   - read from existing sample JSON or processed CSVs
+   - upsert books, tags, and recommendations
+   - require server-only env vars only
+   - do not run automatically in the browser
+5. Update README or local docs only if command references change.
 
 Validation:
-
-- Run or inspect enough to confirm the documented commands match the repo.
-- If you run commands, prefer:
-  - make check-env
-  - make pipeline-demo
-- Do not run network-dependent commands unless needed.
-- Do not run npm install unless dependencies are missing and I explicitly approve it.
+- Run or explain `make pipeline-demo`.
+- Run `uv run ruff check .` if Python scripts are changed.
+- Run `cd apps/web && npm run lint` and `cd apps/web && npm run build` if frontend files are changed.
 
 Output:
-
-After editing, provide a handoff using the Phase Handoff Template in docs/PLAN.md.
-Include changed files, exact commands run, command results, unresolved questions, and recommended next step.
+Provide a Phase Handoff using the template in docs/PLAN.md.
+Include changed files, commands run, pass/fail results, important decisions, gaps/risks, and the recommended next phase.
 ```
 
 ### Phase Handoff Template
@@ -420,7 +476,8 @@ Briefly describe what changed and why.
 ### Scope Check
 
 - [ ] Stayed within the requested phase
-- [ ] Did not add FastAPI, Modal, Supabase, LiteLLM, or backend services
+- [ ] Did not add FastAPI, Modal, LiteLLM, Supabase Auth, or Supabase Storage
+- [ ] Did not expose service-role keys, database URLs, or other secrets to browser code
 - [ ] Did not commit secrets or generated large data
 - [ ] Did not remove `.gitignore` protections
 
@@ -463,14 +520,16 @@ Optional live collection command:
 uv run python scripts/collect_openlibrary.py --contact you@example.com --limit-per-subject 25
 ```
 
-After live collection, rerun the pipeline command that Cursor implements for Open Library input.
+After live collection, rerun the pipeline command for Open Library input and seed Supabase from the processed output.
 
 ## Definition Of Done
 
-The MVP pass is done when:
+The Supabase-backed MVP pass is done when:
 
-- The Python pipeline produces clean processed data and committed sample JSON fixtures.
-- The web app renders a usable explorer as the first screen.
+- The Python pipeline produces clean processed data.
+- Supabase migrations define the durable data model.
+- A documented seed/import workflow loads books, tags, and recommendations.
+- The web app can read from Supabase with fixture fallback.
 - Search, filters, top tags, detail view, recommendations, reason chips, and analytics all work.
 - The app builds successfully.
 - Documentation explains how to reproduce the workflow from WSL/Cursor.

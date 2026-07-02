@@ -1,0 +1,15 @@
+---
+description: BookLens project rules
+alwaysApply: true
+---
+
+# BookLens project rules
+
+- Keep the first build small: data pipeline, Next.js UI, top tags, and similar-books recommendations.
+- Do not add FastAPI/Modal until a separate backend/API is actually needed.
+- Do not add Supabase until auth, database, or storage is actually needed.
+- Do not add LiteLLM or provider SDKs until model calls are actually needed.
+- Work inside WSL2 Ubuntu, not under `/mnt/c/...`.
+- Use Linux-side Node, npm, Python, uv, git, and make.
+- Never commit `.env` files, API keys, service-role keys, database URLs, deployment credentials, or model provider keys.
+- Commit only `.env.example` files with placeholder variable names.
