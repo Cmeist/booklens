@@ -4,16 +4,17 @@ BookLens is an interactive book discovery and recommendation web app built as a 
 
 ## Current MVP direction
 
-This repo is building a **static-data MVP**:
+This repo is building a **Supabase-backed MVP**:
 
 1. Python scripts collect and process book data.
-2. The pipeline writes processed CSVs locally and (in later phases) a small JSON fixture for the web app.
-3. The Next.js app reads that fixture and renders the explorer, detail views, and analytics.
-4. Similarity and recommendation reasons are precomputed in Python.
+2. The pipeline writes processed CSVs locally and committed JSON fixtures for fallback/dev use.
+3. SQL migrations in `supabase/migrations/` define the Postgres schema.
+4. A seed script loads books, tags, and recommendations into Supabase.
+5. The Next.js app currently reads fixtures; Phase 6 will add Supabase reads with fixture fallback.
 
-**Not in scope yet:** FastAPI, Modal, Supabase, auth, LiteLLM, or user accounts. Those are documented in `docs/DESIGN.md` as future options only.
+**Not in scope yet:** FastAPI, Modal, Supabase Auth, Supabase Storage, LiteLLM, or user accounts.
 
-See `docs/PLAN.md` for the phased build plan and `docs/DESIGN.md` for product and design goals.
+See `docs/PLAN.md` for the phased build plan, `supabase/README.md` for database setup, and `docs/DESIGN.md` for product goals.
 
 ## Repo structure
 
@@ -29,7 +30,11 @@ booklens/
 │   └── LOCAL_DEV_WSL_CURSOR.md
 ├── scripts/
 │   ├── run_pipeline.py    # Demo pipeline (writes sample processed data)
-│   └── collect_openlibrary.py
+│   ├── collect_openlibrary.py
+│   └── seed_supabase.py   # Upsert fixture/processed data into Supabase
+├── supabase/
+│   ├── migrations/        # Committed SQL schema
+│   └── README.md          # Supabase setup, migrations, and seed workflow
 ├── .env.example           # Safe to commit (placeholders only)
 ├── Makefile               # Common local commands
 ├── pyproject.toml         # Python project (uv)
@@ -82,6 +87,7 @@ From the repo root:
 | --- | --- |
 | `make check-env` | Print paths for git, node, npm, python3, and uv |
 | `make pipeline-demo` | Run the demo data pipeline |
+| `make seed-supabase` | Upsert sample JSON into Supabase (`SUPABASE_DB_URL` required) |
 | `make web-dev` | Start the Next.js dev server |
 | `make web-build` | Production build of the web app |
 | `make status` | Show `git status` |
@@ -106,8 +112,12 @@ uv run python scripts/collect_openlibrary.py --contact you@example.com --limit-p
 
 - Copy `.env.example` to `.env` for local-only values. **Never commit `.env`.**
 - `.env.example` uses placeholders only and is safe to commit.
+- Browser-safe Supabase vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- Server-only seed vars: `SUPABASE_DB_URL` (and optional service-role keys for future tooling)
 - Do not commit API keys, database URLs, service-role keys, or other secrets.
-- Most MVP work does not require a populated `.env` yet.
+- The web app still works from committed JSON fixtures when Supabase env vars are unset.
+
+Supabase setup: [`supabase/README.md`](supabase/README.md)
 
 ## Local development workflow
 
