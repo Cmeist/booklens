@@ -13,6 +13,10 @@ If those vars are absent (for example on a fresh Vercel deploy without configura
   - `books_with_tags` view
   - `top_tags` view
   - read-only RLS policies for the `anon` role
+- `migrations/20260703150000_provider_identity_tables.sql`
+  - `book_sources` — maps canonical `book_id` to provider IDs (server-only RLS)
+  - `book_isbns` — normalized ISBNs for cross-provider matching (server-only RLS)
+  - `ingestion_runs` — audit log for seed/import attempts (server-only RLS)
 
 ## Prerequisites
 
@@ -73,7 +77,7 @@ supabase link --project-ref <your-project-ref>
 supabase db push
 ```
 
-If you are not using the CLI, paste the contents of `migrations/20260302000000_initial_booklens_schema.sql` into the Supabase SQL editor and run it once.
+If you are not using the CLI, paste the contents of each file in `migrations/` into the Supabase SQL editor and run them in filename order.
 
 ### Local Supabase
 
@@ -135,10 +139,80 @@ This reads:
 ```bash
 make collect-openlibrary
 make pipeline-openlibrary
+make enrich-google-books
 make seed-supabase SOURCE=csv
 ```
 
+`seed_supabase.py` prefers `data/processed/books_enriched.csv` when it exists and is newer than `books_clean.csv`.
+
+### 7. Google Books enrichment
+
+Requires `GOOGLE_BOOKS_API_KEY` in repo-root `.env` (server-only).
+
+```bash
+make enrich-google-books
+make enrich-google-books LIMIT=3   # smoke test on first 3 rows
+```
+
+`LIMIT=N` limits API calls only; the output CSV still includes all input rows.
+
+Reads `data/processed/books_clean.csv`, writes:
+
+- `data/processed/books_enriched.csv`
+- `data/processed/google_books_enrichment_report.txt`
+
+Enriched CSV columns consumed by seeding:
+
+- `isbns` — JSON array, e.g. `[{"isbn":"978...","isbnType":"ISBN_13","provider":"googlebooks"}]`
+- `extra_sources` — JSON array with Google Books `provider` / `provider_id` for `book_sources`
+
+Primary `books.source` and `books.source_id` remain the Open Library values.
+
 See `docs/LIVE_DATA_PLAN.md` for the full live-data workflow and quality report details.
+
+## Provenance tables
+
+Phase 11 adds server-only provenance tables. The frontend still reads only `books`, tags, recommendations, and views.
+
+| Table | Purpose | Anon access |
+| --- | --- | --- |
+| `book_sources` | Links each book to provider IDs (`openlibrary`, `demo`, etc.) | None |
+| `book_isbns` | Normalized ISBNs for future cross-provider matching | None |
+| `ingestion_runs` | Audit trail for each `seed_supabase.py` run | None |
+
+`make seed-supabase` (JSON or CSV) upserts:
+
+1. `books`, `book_tags`, `book_recommendations` (unchanged frontend contract)
+2. `book_sources` from each row's `source` + `source_id`
+3. An `ingestion_runs` record with insert/update/error counts
+
+`book_isbns` stays empty until enrichment provides real ISBNs (Phase 12). The seed script does not fabricate ISBNs.
+
+### Provider ID mapping
+
+Canonical BookLens `books.id` is a stable hash. Provider identity lives in `book_sources`:
+
+```text
+books.id  ←→  book_sources (provider, provider_id)
+```
+
+Example Open Library row:
+
+- `books.source` / `books.source_id` — primary provider fields used by the app today
+- `book_sources.provider` = `openlibrary`
+- `book_sources.provider_id` = `/works/OL123W` (work key from collection)
+- `book_sources.provider_url` = `https://openlibrary.org/works/OL123W`
+
+Verify provenance after seeding:
+
+```sql
+select count(*) from public.book_sources;
+select provider, count(*) from public.book_sources group by provider;
+select id, provider, mode, status, inserted_count, updated_count, finished_at
+from public.ingestion_runs
+order by started_at desc
+limit 5;
+```
 
 ## Security notes
 

@@ -260,6 +260,7 @@ make check-env      # verify tool paths
 make pipeline-demo  # run demo Python pipeline
 make collect-openlibrary  # live Open Library collection
 make pipeline-openlibrary  # process collected Open Library CSV
+make enrich-google-books   # optional Google Books metadata fill
 make seed-supabase  # upsert fixtures into Supabase (SUPABASE_DB_URL)
 make seed-supabase SOURCE=csv  # upsert processed live CSVs
 make web-dev        # Next.js dev server

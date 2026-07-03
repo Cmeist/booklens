@@ -215,6 +215,8 @@ Only auto-merge strong and medium matches. Write weak matches to a review report
 Completed phases:
 
 1. Phase 10: Real Open Library Seed
+2. Phase 11: Provider Identity Tables
+3. Phase 12: Google Books Enrichment
 
 ### Phase 10: Real Open Library Seed
 
@@ -293,6 +295,21 @@ Acceptance criteria:
 - Open Library seed creates source records.
 - RLS does not expose server-only ingestion details unless intentionally selected.
 
+Implementation notes:
+
+- Migration: `supabase/migrations/20260703150000_provider_identity_tables.sql`
+- `book_sources` is populated from each seeded book's `source` + `source_id`
+- `book_isbns` schema is ready; rows are added only when seed data includes ISBNs
+- `ingestion_runs` records each `seed_supabase.py` attempt with counts and status
+- Provenance tables have RLS enabled with **no** anon/authenticated policies
+
+Workflow (unchanged for the frontend):
+
+```bash
+make seed-supabase              # JSON fixture
+make seed-supabase SOURCE=csv   # processed live CSV
+```
+
 ### Phase 12: Google Books Enrichment
 
 Goal: enrich existing Open Library records with Google Books metadata.
@@ -320,6 +337,31 @@ Acceptance criteria:
 - Enrichment can run on a small sample first.
 - Existing Open Library source IDs are preserved.
 - Processed CSVs improve page count and cover coverage.
+
+Implementation notes:
+
+- Script: `scripts/enrich_google_books.py`
+- Input default: `data/processed/books_clean.csv`
+- Output: `data/processed/books_enriched.csv`
+- Report: `data/processed/google_books_enrichment_report.txt`
+- `isbns` and `extra_sources` columns are JSON strings for `seed_supabase.py`
+- `make seed-supabase SOURCE=csv` prefers `books_enriched.csv` when it is present and newer than `books_clean.csv`
+- `LIMIT=N` enriches only the first N rows but still writes the full CSV through unchanged
+- Primary `source` / `source_id` stay on the Open Library record; Google Books maps to `extra_sources`
+
+Workflow:
+
+```bash
+make pipeline-openlibrary
+make enrich-google-books
+make seed-supabase SOURCE=csv
+```
+
+Smoke test:
+
+```bash
+make enrich-google-books LIMIT=3
+```
 
 ### Phase 13: Popularity Signals
 
@@ -384,6 +426,7 @@ Planned command shape:
 ```bash
 make collect-openlibrary
 make pipeline-openlibrary
+make enrich-google-books
 make seed-supabase SOURCE=csv
 make verify
 ```

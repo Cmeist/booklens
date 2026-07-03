@@ -1,4 +1,4 @@
-.PHONY: check-env pipeline-demo pipeline-openlibrary collect-openlibrary seed-supabase web-dev web-build verify status
+.PHONY: check-env pipeline-demo pipeline-openlibrary collect-openlibrary enrich-google-books seed-supabase web-dev web-build verify status
 
 check-env:
 	@echo "Checking tool paths..."
@@ -27,6 +27,9 @@ collect-openlibrary:
 		--limit-total $(LIMIT_TOTAL) \
 		--sleep-seconds 0.25 \
 		--out data/raw/openlibrary_books.csv
+
+enrich-google-books:
+	uv run python scripts/enrich_google_books.py $(if $(LIMIT),--limit $(LIMIT),)
 
 seed-supabase:
 	uv run python scripts/seed_supabase.py $(if $(SOURCE),--source $(SOURCE),)
