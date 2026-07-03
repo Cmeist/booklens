@@ -14,7 +14,7 @@ This repo ships a **Supabase-backed MVP** with a committed fixture fallback:
 
 **Not in scope:** FastAPI, Modal, Supabase Auth, Supabase Storage, LiteLLM, or user accounts.
 
-See `docs/PLAN.md` for the phased build plan, `supabase/README.md` for database setup, and `docs/DESIGN.md` for product goals.
+See `docs/PLAN.md` for the phased build plan, `docs/LIVE_DATA_PLAN.md` for live Open Library ingestion, `supabase/README.md` for database setup, and `docs/DESIGN.md` for product goals.
 
 ## Repo structure
 
@@ -89,6 +89,8 @@ From the repo root:
 | --- | --- |
 | `make check-env` | Print paths for git, node, npm, python3, and uv |
 | `make pipeline-demo` | Run the demo data pipeline |
+| `make collect-openlibrary` | Collect real Open Library books (`BOOKLENS_CONTACT_EMAIL` or `CONTACT=...` required) |
+| `make pipeline-openlibrary` | Process `data/raw/openlibrary_books.csv` into processed CSVs |
 | `make seed-supabase` | Upsert sample JSON into Supabase (`SUPABASE_DB_URL` required) |
 | `make web-dev` | Start the Next.js dev server |
 | `make web-build` | Production build of the web app |
@@ -105,11 +107,17 @@ From `apps/web`:
 | `npm run lint` | ESLint |
 | `npm run start` | Serve a production build |
 
-Optional live data collection (network required; not needed for the demo pipeline):
+Optional live Open Library collection (network required; not needed for the demo pipeline):
 
 ```bash
-uv run python scripts/collect_openlibrary.py --contact you@example.com --limit-per-subject 25
+make collect-openlibrary
+make pipeline-openlibrary
+make seed-supabase SOURCE=csv
 ```
+
+Defaults collect up to **120** unique works across **10** subjects (`LIMIT_TOTAL` and `SUBJECTS` are overridable). Generated files stay under `data/raw/` and `data/processed/` and are Git-ignored.
+
+Full workflow: [`docs/LIVE_DATA_PLAN.md`](docs/LIVE_DATA_PLAN.md)
 
 ## Verification
 

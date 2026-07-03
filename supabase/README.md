@@ -55,7 +55,9 @@ Example source for the DB URL in the Supabase dashboard:
 
 `Project Settings → Database → Connection string → URI`
 
-Use the direct Postgres connection string, not the pooler URL, unless you know you need pooling for the seed script.
+From **WSL**, prefer the **Session pooler** URI (`postgres.<project-ref>@...pooler.supabase.com:5432`). The direct `db.<project-ref>.supabase.co` host often resolves to IPv6 and fails from WSL.
+
+From Linux/macOS hosts with working direct Postgres access, the direct URI is fine.
 
 ## Migration workflow
 
@@ -127,6 +129,16 @@ This reads:
 
 - `data/processed/books_clean.csv`
 - `data/processed/recommendations.csv`
+
+### 6. Seed from live Open Library data
+
+```bash
+make collect-openlibrary
+make pipeline-openlibrary
+make seed-supabase SOURCE=csv
+```
+
+See `docs/LIVE_DATA_PLAN.md` for the full live-data workflow and quality report details.
 
 ## Security notes
 

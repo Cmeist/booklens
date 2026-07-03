@@ -507,24 +507,37 @@ def export_recommendations_json(recommendations: pd.DataFrame, out_path: Path) -
     out_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
+def missing_cover_count(df: pd.DataFrame) -> int:
+    covers = df["cover_url"].fillna("").astype(str).str.strip()
+    return int((covers == "").sum())
+
+
+def missing_ratings_count(df: pd.DataFrame) -> int:
+    missing_rating_count = df["rating_count"].isna()
+    missing_average_rating = df["average_rating"].isna()
+    return int((missing_rating_count | missing_average_rating).sum())
+
+
 def write_quality_report(
     df: pd.DataFrame,
     top_tags: pd.DataFrame,
     recommendations: pd.DataFrame,
     out_path: Path,
+    *,
+    input_mode: str,
 ) -> None:
     lines = [
         "BookLens Data Quality Report",
         "============================",
-        f"Rows: {len(df)}",
+        f"Input mode: {input_mode}",
+        f"Book rows: {len(df)}",
         "",
         "Missing field counts:",
         f"- description: {int((df['description'] == '').sum())}",
-        f"- publication_year: {int(df['publication_year'].isna().sum())}",
+        f"- cover_url: {missing_cover_count(df)}",
         f"- page_count: {int(df['page_count'].isna().sum())}",
-        f"- rating_count: {int(df['rating_count'].isna().sum())}",
-        f"- average_rating: {int(df['average_rating'].isna().sum())}",
-        f"- cover_url: {int(df['cover_url'].isna().sum())}",
+        f"- ratings (rating_count or average_rating): {missing_ratings_count(df)}",
+        f"- publication_year: {int(df['publication_year'].isna().sum())}",
         "",
         "Top tags:",
     ]
@@ -538,7 +551,7 @@ def write_quality_report(
     lines.extend(
         [
             "",
-            f"Recommendations: {len(recommendations)}",
+            f"Recommendation rows: {len(recommendations)}",
         ]
     )
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -548,6 +561,13 @@ def write_quality_report(
 def run_pipeline(use_openlibrary: bool, input_path: Path | None) -> None:
     RAW_DIR.mkdir(parents=True, exist_ok=True)
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+
+    if input_path is not None:
+        input_mode = f"custom ({input_path.name})"
+    elif use_openlibrary:
+        input_mode = "openlibrary"
+    else:
+        input_mode = "demo"
 
     raw_df = load_raw_dataframe(use_openlibrary=use_openlibrary, input_path=input_path)
     if not use_openlibrary and input_path is None:
@@ -589,7 +609,7 @@ def run_pipeline(use_openlibrary: bool, input_path: Path | None) -> None:
     print(f"Wrote {recommendations_path}")
 
     report_path = PROCESSED_DIR / "data_quality_report.txt"
-    write_quality_report(books, top_tags, recommendations, report_path)
+    write_quality_report(books, top_tags, recommendations, report_path, input_mode=input_mode)
     print(f"Wrote {report_path}")
 
     books_json_path = WEB_DATA_DIR / "books.sample.json"

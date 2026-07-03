@@ -234,6 +234,23 @@ cd apps/web && npm run build
 
 **Fixture fallback:** with no Supabase env vars, the app uses `apps/web/src/data/*.sample.json` — no database required for local dev or a demo deploy.
 
+## Live Open Library seed
+
+After migrations are applied, you can load real Open Library data:
+
+```bash
+make collect-openlibrary
+make pipeline-openlibrary
+make seed-supabase SOURCE=csv
+```
+
+Requirements:
+
+- `SUPABASE_DB_URL` in repo-root `.env` (Session pooler URI recommended from WSL)
+- `NEXT_PUBLIC_SUPABASE_*` in `apps/web/.env.local` for the frontend
+
+Inspect `data/processed/data_quality_report.txt` after the pipeline. Re-run `make web-dev` and confirm the header shows **Data: Supabase**.
+
 ## Reference: Makefile shortcuts
 
 From repo root:
@@ -241,7 +258,10 @@ From repo root:
 ```bash
 make check-env      # verify tool paths
 make pipeline-demo  # run demo Python pipeline
+make collect-openlibrary  # live Open Library collection
+make pipeline-openlibrary  # process collected Open Library CSV
 make seed-supabase  # upsert fixtures into Supabase (SUPABASE_DB_URL)
+make seed-supabase SOURCE=csv  # upsert processed live CSVs
 make web-dev        # Next.js dev server
 make web-build      # Next.js production build
 make verify         # pipeline + ruff + lint + build

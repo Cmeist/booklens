@@ -1,10 +1,12 @@
 import argparse
+import os
 import time
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 import requests
+from dotenv import load_dotenv
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -54,7 +56,37 @@ def normalize_description(value: Any) -> str:
     return ""
 
 
-def collect_books(contact: str, limit_per_subject: int, sleep_seconds: float) -> pd.DataFrame:
+def parse_subjects(raw_subjects: str | None) -> list[str]:
+    if not raw_subjects:
+        return list(DEFAULT_SUBJECTS)
+
+    subjects = [subject.strip() for subject in raw_subjects.split(",") if subject.strip()]
+    if not subjects:
+        raise ValueError("At least one subject is required when --subjects is provided.")
+    return subjects
+
+
+def resolve_contact(cli_contact: str | None) -> str:
+    if cli_contact and cli_contact.strip():
+        return cli_contact.strip()
+
+    load_dotenv(ROOT / ".env")
+    env_contact = os.getenv("BOOKLENS_CONTACT_EMAIL", "").strip()
+    if env_contact:
+        return env_contact
+
+    raise ValueError(
+        "Contact email is required. Pass --contact or set BOOKLENS_CONTACT_EMAIL in .env."
+    )
+
+
+def collect_books(
+    contact: str,
+    subjects: list[str],
+    limit_per_subject: int,
+    limit_total: int | None,
+    sleep_seconds: float,
+) -> pd.DataFrame:
     headers = {
         "User-Agent": f"BookLens student portfolio project ({contact})",
     }
@@ -62,7 +94,10 @@ def collect_books(contact: str, limit_per_subject: int, sleep_seconds: float) ->
     rows: list[dict[str, Any]] = []
     seen_work_keys: set[str] = set()
 
-    for subject in DEFAULT_SUBJECTS:
+    for subject in subjects:
+        if limit_total is not None and len(rows) >= limit_total:
+            break
+
         subject_url = (
             f"https://openlibrary.org/subjects/{subject}.json"
             f"?limit={limit_per_subject}"
@@ -76,6 +111,9 @@ def collect_books(contact: str, limit_per_subject: int, sleep_seconds: float) ->
             continue
 
         for work in subject_data.get("works", []):
+            if limit_total is not None and len(rows) >= limit_total:
+                break
+
             work_key = work.get("key")
 
             if not work_key or work_key in seen_work_keys:
@@ -132,18 +170,46 @@ def collect_books(contact: str, limit_per_subject: int, sleep_seconds: float) ->
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--contact", required=True, help="Contact email for API User-Agent")
+    parser = argparse.ArgumentParser(
+        description="Collect book metadata from Open Library subject pages."
+    )
+    parser.add_argument(
+        "--contact",
+        default=None,
+        help="Contact email for API User-Agent; defaults to BOOKLENS_CONTACT_EMAIL",
+    )
+    parser.add_argument(
+        "--subjects",
+        default=None,
+        help="Comma-separated Open Library subjects (default: built-in genre list)",
+    )
     parser.add_argument("--limit-per-subject", type=int, default=25)
+    parser.add_argument(
+        "--limit-total",
+        type=int,
+        default=None,
+        help="Stop after collecting this many unique works across all subjects",
+    )
     parser.add_argument("--sleep-seconds", type=float, default=0.25)
     parser.add_argument("--out", default=str(RAW_DIR / "openlibrary_books.csv"))
     args = parser.parse_args()
 
     RAW_DIR.mkdir(parents=True, exist_ok=True)
 
+    try:
+        contact = resolve_contact(args.contact)
+        subjects = parse_subjects(args.subjects)
+    except ValueError as exc:
+        parser.error(str(exc))
+
+    if args.limit_total is not None and args.limit_total < 1:
+        parser.error("--limit-total must be at least 1.")
+
     books = collect_books(
-        contact=args.contact,
+        contact=contact,
+        subjects=subjects,
         limit_per_subject=args.limit_per_subject,
+        limit_total=args.limit_total,
         sleep_seconds=args.sleep_seconds,
     )
 

@@ -18,8 +18,9 @@ This repo already has:
 - Sample JSON fixtures
 - A Next.js explorer shell
 - Client-side filtering
+- Supabase migrations, seeding, live reads, detail pages, analytics, and deployment verification
 
-The plan is changing from a static-data MVP to a Supabase-backed MVP. Keep the existing static fixture as a local fallback and development safety net, but make Supabase the intended production data source.
+The current MVP is Supabase-backed. Keep the existing static fixture as a local fallback and development safety net, but make Supabase the intended production data source. The next plan is live data ingestion from APIs; see `docs/LIVE_DATA_PLAN.md`.
 
 ## Non-Goals For This Pass
 
@@ -45,11 +46,12 @@ Important existing files:
 - `scripts/collect_openlibrary.py`: Open Library collector that writes raw CSV data
 - `apps/web`: Next.js + TypeScript app
 - `apps/web/src/data/*.sample.json`: committed sample fixture
-- `apps/web/src/lib/data.ts`: current static fixture data helpers
+- `apps/web/src/lib/booklens-data.ts`: fixture data helpers and shared lookups
+- `apps/web/src/lib/load-booklens-data.ts`: server-side Supabase loader with fixture fallback
 - `apps/web/src/lib/filters.ts`: client-side filtering helpers
 - `.gitignore`: excludes `.env`, `.venv`, `node_modules`, `.next`, and generated `data/raw` / `data/processed`
 
-Known gap: the app currently reads committed JSON fixtures, not Supabase.
+Known gap: the hosted database now needs a safe live-data import workflow beyond the small committed fixture. Use `docs/LIVE_DATA_PLAN.md` for the API seeding roadmap.
 
 ## Architecture Decision
 
@@ -234,6 +236,16 @@ Completed phases:
 7. Book detail pages (`/books/[id]`)
 8. Analytics section
 9. Polish, deployment, and verification
+
+Next phases:
+
+- Phase 10: real Open Library seed
+- Phase 11: provider identity tables
+- Phase 12: Google Books enrichment
+- Phase 13: optional popularity signals
+- Phase 14: repeatable refresh workflow
+
+See `docs/LIVE_DATA_PLAN.md` for detailed tasks, guardrails, and the Phase 10 Cursor prompt.
 
 ### Phase 5: Supabase Foundation
 
