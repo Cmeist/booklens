@@ -9,6 +9,13 @@ import {
 import { AnalyticsSection } from "@/components/analytics-section";
 import { ActiveFilterChips, FilterControls } from "@/components/filter-controls";
 import {
+  buttonPrimaryClassName,
+  contentContainerClassName,
+  dataBadgeClassName,
+  pageShellClassName,
+  warningBannerClassName,
+} from "@/lib/ui";
+import {
   getRecommendationsWithBooks,
   type BookLensData,
 } from "@/lib/data";
@@ -60,15 +67,15 @@ export function BookExplorer({ data, loadWarning }: BookExplorerProps) {
   const dataSourceLabel = source === "supabase" ? "Supabase" : "Sample fixture";
 
   return (
-    <div className="min-h-full bg-[#f4f1ea] text-slate-900">
+    <div className={pageShellClassName}>
       {loadWarning ? (
-        <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:px-6 lg:px-8">
+        <div className={warningBannerClassName} role="status">
           {loadWarning}
         </div>
       ) : null}
 
       <header className="border-b border-slate-200/80 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-5 sm:px-6 lg:px-8">
+        <div className={`${contentContainerClassName} flex flex-col gap-4 py-5`}>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-700">
@@ -83,12 +90,10 @@ export function BookExplorer({ data, loadWarning }: BookExplorerProps) {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+              <div className={`${dataBadgeClassName} bg-slate-100 text-slate-600 ring-0`}>
                 {visibleBooks.length} of {books.length} books shown
               </div>
-              <div className="rounded-full bg-teal-50 px-3 py-1 text-xs font-medium text-teal-800 ring-1 ring-teal-100">
-                Data: {dataSourceLabel}
-              </div>
+              <div className={dataBadgeClassName}>Data: {dataSourceLabel}</div>
             </div>
           </div>
 
@@ -142,8 +147,8 @@ export function BookExplorer({ data, loadWarning }: BookExplorerProps) {
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:px-8">
-        <section aria-label="Book results">
+      <main className={`${contentContainerClassName} grid gap-6 py-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:gap-8`}>
+        <section aria-label="Book results" className="min-w-0">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-slate-900">Results</h2>
           </div>
@@ -168,7 +173,7 @@ export function BookExplorer({ data, loadWarning }: BookExplorerProps) {
               <button
                 type="button"
                 onClick={() => setFilters(defaultBookFilters)}
-                className="mt-4 rounded-full bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800"
+                className={`mt-4 ${buttonPrimaryClassName}`}
               >
                 Clear all filters
               </button>
@@ -177,11 +182,17 @@ export function BookExplorer({ data, loadWarning }: BookExplorerProps) {
         </section>
 
         {selectedBook ? (
-          <BookDetailPanel book={selectedBook} recommendationPairs={recommendationPairs} />
-        ) : null}
+          <div className="min-w-0 lg:sticky lg:top-6 lg:self-start">
+            <BookDetailPanel book={selectedBook} recommendationPairs={recommendationPairs} />
+          </div>
+        ) : (
+          <div className="hidden rounded-2xl border border-dashed border-slate-200 bg-white/70 px-5 py-8 text-center text-sm text-slate-500 lg:block">
+            Select a book to preview details and similar titles.
+          </div>
+        )}
       </main>
 
-      <div className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
+      <div className={`${contentContainerClassName} pb-10`}>
         <AnalyticsSection books={books} topTags={topTags} source={source} />
       </div>
     </div>

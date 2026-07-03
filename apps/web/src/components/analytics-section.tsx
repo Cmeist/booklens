@@ -6,6 +6,7 @@ import {
   type TagRatingAverage,
 } from "@/lib/analytics";
 import type { BookLensDataSource } from "@/lib/booklens-data";
+import { dataBadgeClassName } from "@/lib/ui";
 import type { Book, TopTag } from "@/lib/types";
 
 function UnavailableChart({ message }: { message: string }) {
@@ -164,8 +165,8 @@ export function AnalyticsSection({
             honest unavailable states instead of misleading charts.
           </p>
         </div>
-        <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-medium text-teal-800 ring-1 ring-teal-100">
-          {analytics.bookCount} books
+        <span className={dataBadgeClassName}>
+          {analytics.bookCount} books · {dataSourceLabel}
         </span>
       </div>
 

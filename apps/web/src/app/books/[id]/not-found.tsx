@@ -1,8 +1,10 @@
 import Link from "next/link";
 
+import { buttonPrimaryClassName, pageShellClassName } from "@/lib/ui";
+
 export default function BookNotFound() {
   return (
-    <div className="flex min-h-full items-center justify-center bg-[#f4f1ea] px-4 py-16">
+    <div className={`flex ${pageShellClassName} items-center justify-center px-4 py-16`}>
       <div className="max-w-lg rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-700">
           BookLens
@@ -12,10 +14,7 @@ export default function BookNotFound() {
           That book id is not in the current dataset. Return to the explorer to browse available
           books.
         </p>
-        <Link
-          href="/"
-          className="mt-6 inline-flex rounded-full bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800"
-        >
+        <Link href="/" className={`mt-6 ${buttonPrimaryClassName}`}>
           Back to explorer
         </Link>
       </div>

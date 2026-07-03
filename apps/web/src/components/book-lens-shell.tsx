@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { linkClassName } from "@/lib/ui";
+
 import {
   formatPageCount,
   formatRating,
@@ -215,7 +217,7 @@ function BookDetailContent({
         <div className="mt-5 space-y-2">
           <Link
             href={`/books/${book.id}`}
-            className="inline-flex text-sm font-medium text-teal-700 hover:text-teal-800"
+            className={linkClassName}
           >
             Open full detail page →
           </Link>
@@ -274,7 +276,7 @@ function BookListCard({
       <div className="mt-3 flex justify-end">
         <Link
           href={`/books/${book.id}`}
-          className="text-xs font-medium text-teal-700 hover:text-teal-800"
+          className={linkClassName}
         >
           Open detail page
         </Link>

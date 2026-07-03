@@ -1,18 +1,18 @@
 # BookLens
 
-BookLens is an interactive book discovery and recommendation web app built as a data analytics portfolio project. Users explore books with useful filters, browse popular tags, and see explainable similar-book recommendations.
+BookLens is an interactive book discovery and recommendation web app built as a data analytics portfolio project. Users explore books with useful filters, browse popular tags, see explainable similar-book recommendations, and review lightweight dataset analytics.
 
-## Current MVP direction
+## Current MVP (complete)
 
-This repo is building a **Supabase-backed MVP**:
+This repo ships a **Supabase-backed MVP** with a committed fixture fallback:
 
-1. Python scripts collect and process book data.
-2. The pipeline writes processed CSVs locally and committed JSON fixtures for fallback/dev use.
+1. Python scripts collect and process book data (`make pipeline-demo`).
+2. The pipeline writes processed CSVs locally and committed JSON fixtures under `apps/web/src/data/`.
 3. SQL migrations in `supabase/migrations/` define the Postgres schema.
-4. A seed script loads books, tags, and recommendations into Supabase.
-5. The Next.js app currently reads fixtures; Phase 6 will add Supabase reads with fixture fallback.
+4. `make seed-supabase` loads books, tags, and recommendations into Supabase (server-only `SUPABASE_DB_URL`).
+5. The Next.js app reads from Supabase when `NEXT_PUBLIC_SUPABASE_*` env vars are set; otherwise it uses the committed sample JSON.
 
-**Not in scope yet:** FastAPI, Modal, Supabase Auth, Supabase Storage, LiteLLM, or user accounts.
+**Not in scope:** FastAPI, Modal, Supabase Auth, Supabase Storage, LiteLLM, or user accounts.
 
 See `docs/PLAN.md` for the phased build plan, `supabase/README.md` for database setup, and `docs/DESIGN.md` for product goals.
 
@@ -20,7 +20,7 @@ See `docs/PLAN.md` for the phased build plan, `supabase/README.md` for database 
 
 ```text
 booklens/
-├── apps/web/              # Next.js + TypeScript frontend
+├── apps/web/              # Next.js + TypeScript frontend (Vercel root)
 ├── data/
 │   ├── raw/               # Generated raw CSVs (Git-ignored)
 │   └── processed/         # Generated processed CSVs (Git-ignored)
@@ -41,7 +41,7 @@ booklens/
 └── uv.lock
 ```
 
-Generated outputs under `data/raw/` and `data/processed/` stay out of Git. Only a small curated web fixture under `apps/web/src/data/` will be committed for the deployed demo (Phase 2+).
+Generated outputs under `data/raw/` and `data/processed/` stay out of Git. Committed web fixtures under `apps/web/src/data/*.sample.json` power local dev and Vercel when Supabase is not configured.
 
 ## Prerequisites
 
@@ -79,6 +79,8 @@ make web-dev
 
 Open [http://localhost:3000](http://localhost:3000) after `make web-dev` starts.
 
+Without Supabase env vars, the app loads the committed sample fixture. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env` (or Vercel) to read live data after migrations and seeding.
+
 ## Common commands
 
 From the repo root:
@@ -90,8 +92,9 @@ From the repo root:
 | `make seed-supabase` | Upsert sample JSON into Supabase (`SUPABASE_DB_URL` required) |
 | `make web-dev` | Start the Next.js dev server |
 | `make web-build` | Production build of the web app |
+| `make verify` | Run all MVP verification commands (see below) |
 | `make status` | Show `git status` |
-| `uv run ruff check .` | Lint Python code |
+| `uv run ruff check scripts/` | Lint Python pipeline/seed scripts |
 
 From `apps/web`:
 
@@ -108,16 +111,47 @@ Optional live data collection (network required; not needed for the demo pipelin
 uv run python scripts/collect_openlibrary.py --contact you@example.com --limit-per-subject 25
 ```
 
+## Verification
+
+Run these before deploying or opening a PR:
+
+```bash
+make pipeline-demo
+uv run ruff check scripts/
+cd apps/web && npm run lint
+cd apps/web && npm run build
+```
+
+Or from the repo root:
+
+```bash
+make verify
+```
+
 ## Environment and secrets
 
 - Copy `.env.example` to `.env` for local-only values. **Never commit `.env`.**
 - `.env.example` uses placeholders only and is safe to commit.
-- Browser-safe Supabase vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- Server-only seed vars: `SUPABASE_DB_URL` (and optional service-role keys for future tooling)
+- **Browser-safe (Next.js):** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- **Server-only (seed scripts, never Vercel):** `SUPABASE_DB_URL` (and optional service-role keys for future tooling)
 - Do not commit API keys, database URLs, service-role keys, or other secrets.
-- The web app still works from committed JSON fixtures when Supabase env vars are unset.
+- **Fixture fallback:** if public Supabase env vars are missing or Supabase fetch fails, the app serves `apps/web/src/data/*.sample.json` and shows a warning banner when appropriate.
 
 Supabase setup: [`supabase/README.md`](supabase/README.md)
+
+## Deploy to Vercel
+
+1. Import the Git repository in [Vercel](https://vercel.com).
+2. Set **Root Directory** to `apps/web`.
+3. Framework preset: **Next.js** (default). Build command `npm run build`, output `.next`.
+4. Add **Environment Variables** (Production and Preview as needed):
+   - `NEXT_PUBLIC_SUPABASE_URL` — project URL from Supabase dashboard
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — anon/public key from Supabase dashboard
+5. **Do not** add `SUPABASE_DB_URL` to Vercel. It is for local/server seed scripts only and must never ship to browser code.
+6. Apply migrations and run `make seed-supabase` locally (or from CI) against your hosted Supabase project before expecting live data on Vercel.
+7. Without Supabase env vars on Vercel, the deployed app still works from committed sample JSON fixtures.
+
+`/books/[id]` routes are generated on demand; the home page revalidates every 5 minutes (`revalidate = 300`).
 
 ## Local development workflow
 

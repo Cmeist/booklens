@@ -229,6 +229,11 @@ Completed phases:
 2. Build the data pipeline
 3. Replace the Next.js starter with the app shell
 4. Build client-side explorer filters
+5. Supabase foundation (migrations, seed, env docs)
+6. Supabase reads with fixture fallback
+7. Book detail pages (`/books/[id]`)
+8. Analytics section
+9. Polish, deployment, and verification
 
 ### Phase 5: Supabase Foundation
 
@@ -355,9 +360,10 @@ Tasks:
 4. Document Supabase migration and seed workflow.
 5. Run validation commands:
    - `make pipeline-demo`
-   - `uv run ruff check .`
+   - `uv run ruff check scripts/`
    - `cd apps/web && npm run lint`
    - `cd apps/web && npm run build`
+   - or `make verify` from the repo root
 
 Acceptance criteria:
 

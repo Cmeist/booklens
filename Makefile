@@ -1,4 +1,4 @@
-.PHONY: check-env pipeline-demo seed-supabase web-dev web-build status
+.PHONY: check-env pipeline-demo seed-supabase web-dev web-build verify status
 
 check-env:
 	@echo "Checking tool paths..."
@@ -18,6 +18,11 @@ web-dev:
 	cd apps/web && npm run dev
 
 web-build:
+	cd apps/web && npm run build
+
+verify: pipeline-demo
+	uv run ruff check scripts/
+	cd apps/web && npm run lint
 	cd apps/web && npm run build
 
 status:

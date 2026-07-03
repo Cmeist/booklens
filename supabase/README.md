@@ -1,6 +1,8 @@
 # BookLens Supabase
 
-This folder contains the committed Postgres schema for BookLens. Supabase is the intended production data layer; the Next.js app will read public book data with the anon key in Phase 6.
+This folder contains the committed Postgres schema for BookLens. Supabase is the production data layer; the Next.js app reads public book data with the anon key when `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set.
+
+If those vars are absent (for example on a fresh Vercel deploy without configuration), the frontend falls back to committed JSON under `apps/web/src/data/*.sample.json`.
 
 ## What is included
 
@@ -29,12 +31,14 @@ npm install -g supabase
 
 Copy `.env.example` to `.env` locally. Never commit `.env`.
 
-### Frontend-safe (browser)
+### Frontend-safe (browser / Vercel)
 
-These may be exposed to Next.js client code in Phase 6:
+Set these on Vercel and in local `.env` when you want live reads:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+Do **not** set `SUPABASE_DB_URL` on Vercel. Seed and import scripts use it locally or in server-only automation only.
 
 ### Server-only (seed/import scripts only)
 
@@ -80,7 +84,7 @@ supabase db reset
 
 ## Seed/import workflow
 
-The frontend still reads committed JSON fixtures in Phase 5. Seeding Supabase is optional until Phase 6, but this is the supported import path.
+The frontend reads Supabase when public env vars are configured. Seeding is required for live production data; without it, the app uses fixtures.
 
 ### 1. Run the pipeline (optional for CSV source)
 
@@ -144,6 +148,19 @@ select * from public.books_with_tags limit 5;
 
 `top_tags` is ordered by `book_count desc, tag asc` in the view definition.
 
-## Next step
+## Vercel deployment
 
-Phase 6 will add frontend Supabase reads with fixture fallback when public env vars are absent.
+1. In Vercel project settings, set **Root Directory** to `apps/web`.
+2. Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` from the Supabase dashboard (Settings → API).
+3. Do not add `SUPABASE_DB_URL` to Vercel.
+4. Apply migrations and run `make seed-supabase` from a trusted machine with `SUPABASE_DB_URL` in `.env`.
+5. Redeploy or wait for ISR revalidation (home page: 5 minutes) to pick up seeded data.
+
+Without public Supabase vars, Vercel serves the committed sample fixture — useful for demos before the database is wired up.
+
+## Fixture fallback
+
+Keep `apps/web/src/data/*.sample.json` in the repo. The server loader uses them when:
+
+- public Supabase env vars are unset, or
+- a Supabase fetch fails (warning banner shown on the explorer/detail pages).

@@ -157,7 +157,7 @@ npm run start   # after a successful build
 - **`.env.example`** — placeholder names only. Safe to commit.
 - **Real secrets** — API keys, Supabase service-role keys, database URLs, deployment credentials, and model provider keys must never be committed.
 
-The current static-data MVP does not require a filled `.env` for demo pipeline or local frontend work. Placeholders in `.env.example` reference future Supabase/API integration documented in `docs/DESIGN.md`; those services are **not** part of the current MVP pass.
+The current MVP works without a filled `.env` by using committed fixture data. Set public Supabase variables only when you want the frontend to read live hosted data; keep seed/import secrets server-only.
 
 ## 10. Generated data policy
 
@@ -166,7 +166,7 @@ Git ignores:
 - `data/raw/` — raw collection output
 - `data/processed/` — cleaned CSVs and reports from the pipeline
 
-Later phases will commit a **small** JSON fixture under `apps/web/src/data/` for the deployed demo. Until then, treat all pipeline output as disposable local files.
+The repo keeps a **small** committed JSON fixture under `apps/web/src/data/` for fallback/dev use. Treat generated pipeline output as disposable local files unless you intentionally regenerate and review the committed fixture.
 
 Optional live collection (network required; separate from the demo pipeline):
 
@@ -174,7 +174,7 @@ Optional live collection (network required; separate from the demo pipeline):
 uv run python scripts/collect_openlibrary.py --contact you@example.com --limit-per-subject 25
 ```
 
-The collector writes to `data/raw/`. Processing that live data into web-ready fixtures is planned for Phase 2 (`docs/PLAN.md`).
+The collector writes to `data/raw/`. Run `make pipeline-demo` to process demo or collected data into fixtures and optional CSV output.
 
 ## 11. What is out of scope for this MVP pass
 
@@ -182,11 +182,11 @@ Do not expect these in the current repo setup:
 
 - **FastAPI** backend
 - **Modal** deployment
-- **Supabase** database, auth, or storage
 - **LiteLLM** or other model-provider routing
+- **Supabase Auth** or **Storage**
 - User accounts, saved lists, or social features
 
-They may appear in design docs as future options. The MVP is a Python pipeline plus a static-data Next.js app on Vercel.
+Supabase Postgres (read-only anon RLS) **is** in scope and powers production reads when configured. See `supabase/README.md` and the Vercel section in `README.md`.
 
 ## 12. Troubleshooting
 
@@ -210,7 +210,29 @@ Use this after a fresh clone or when onboarding:
 - [ ] `cd apps/web && npm install` completed successfully
 - [ ] `make pipeline-demo` wrote files under `data/raw/` and `data/processed/`
 - [ ] `make web-dev` serves the app at [http://localhost:3000](http://localhost:3000)
+- [ ] `make verify` passes (pipeline, ruff, lint, build) before deploy
 - [ ] No `.env` or generated data files staged for commit
+
+## 14. Verification and deployment
+
+Before deploying or merging MVP changes, run from the repo root:
+
+```bash
+make verify
+```
+
+Equivalent manual steps:
+
+```bash
+make pipeline-demo
+uv run ruff check scripts/
+cd apps/web && npm run lint
+cd apps/web && npm run build
+```
+
+**Vercel:** set Root Directory to `apps/web`. Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` only. Do not add `SUPABASE_DB_URL` to Vercel. See `README.md` for the full checklist.
+
+**Fixture fallback:** with no Supabase env vars, the app uses `apps/web/src/data/*.sample.json` — no database required for local dev or a demo deploy.
 
 ## Reference: Makefile shortcuts
 
@@ -219,8 +241,10 @@ From repo root:
 ```bash
 make check-env      # verify tool paths
 make pipeline-demo  # run demo Python pipeline
+make seed-supabase  # upsert fixtures into Supabase (SUPABASE_DB_URL)
 make web-dev        # Next.js dev server
 make web-build      # Next.js production build
+make verify         # pipeline + ruff + lint + build
 make status         # git status
 ```
 

@@ -1,5 +1,6 @@
 import { BookExplorer } from "@/components/book-explorer";
 import { loadBookLensData } from "@/lib/load-booklens-data";
+import { pageShellClassName } from "@/lib/ui";
 
 export const revalidate = 300;
 
@@ -8,7 +9,7 @@ export default async function Home() {
 
   if (data.books.length === 0) {
     return (
-      <div className="flex min-h-full items-center justify-center bg-[#f4f1ea] px-4 py-16">
+      <div className={`flex ${pageShellClassName} items-center justify-center px-4 py-16`}>
         <div className="max-w-lg rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-700">
             BookLens
