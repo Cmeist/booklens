@@ -3,10 +3,10 @@
 import { useMemo, useState } from "react";
 
 import {
-  AnalyticsPreview,
   BookDetailPanel,
   BookListCard,
 } from "@/components/book-lens-shell";
+import { AnalyticsSection } from "@/components/analytics-section";
 import { ActiveFilterChips, FilterControls } from "@/components/filter-controls";
 import {
   getRecommendationsWithBooks,
@@ -182,7 +182,7 @@ export function BookExplorer({ data, loadWarning }: BookExplorerProps) {
       </main>
 
       <div className="mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
-        <AnalyticsPreview books={books} topTags={topTags} />
+        <AnalyticsSection books={books} topTags={topTags} source={source} />
       </div>
     </div>
   );
