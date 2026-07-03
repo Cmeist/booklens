@@ -17,6 +17,11 @@ out/
 data/raw/
 data/processed/
 
+# Local agent / editor tooling
+.agents/
+.cursor/
+skills-lock.json
+
 # System files
 .DS_Store
 Thumbs.db
