@@ -136,9 +136,7 @@ insert into public.book_isbns (
   %s,
   %s
 )
-on conflict (book_id, isbn) do update set
-  isbn_type = excluded.isbn_type,
-  provider = excluded.provider
+on conflict (isbn) do nothing
 """
 
 INGESTION_RUN_INSERT = """
@@ -515,6 +513,7 @@ def seed_supabase(
     error_count = 0
     source_count = 0
     isbn_count = 0
+    isbn_skipped_count = 0
     notes: list[str] = []
 
     start_ingestion_run(
@@ -590,7 +589,10 @@ def seed_supabase(
                                 isbn_record.get("provider"),
                             ),
                         )
-                        isbn_count += 1
+                        if cur.rowcount:
+                            isbn_count += 1
+                        else:
+                            isbn_skipped_count += 1
 
                 if seeded_book_ids:
                     cur.execute(RECOMMENDATION_DELETE, (seeded_book_ids,))
@@ -612,6 +614,7 @@ def seed_supabase(
         notes.append(str(exc))
         summary = (
             f"book_sources={source_count}; book_isbns={isbn_count}; "
+            f"book_isbns_skipped={isbn_skipped_count}; "
             f"recommendations={len(recommendations)}; errors={' | '.join(notes[:5])}"
         )
         try:
@@ -632,7 +635,7 @@ def seed_supabase(
     status = "succeeded"
     summary = (
         f"book_sources={source_count}; book_isbns={isbn_count}; "
-        f"recommendations={len(recommendations)}"
+        f"book_isbns_skipped={isbn_skipped_count}; recommendations={len(recommendations)}"
     )
     finish_ingestion_run(
         database_url,
@@ -648,7 +651,9 @@ def seed_supabase(
     print(
         "Seeded "
         f"{len(books)} books, {source_count} book_sources rows, "
-        f"{isbn_count} book_isbns rows, and {len(recommendations)} recommendations "
+        f"{isbn_count} book_isbns rows "
+        f"({isbn_skipped_count} duplicate ISBNs skipped), "
+        f"and {len(recommendations)} recommendations "
         f"into Supabase (ingestion_run={run_id}, status={status})."
     )
 
