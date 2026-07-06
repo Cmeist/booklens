@@ -20,6 +20,79 @@ Already available:
 Main limitation:
 
 - The current schema tracks only one `source` and `source_id` per book. That is enough for a single Open Library seed, but it is too thin for multi-API enrichment.
+- The current frontend loads the complete book set into the browser. That is fine for the MVP and portfolio-scale datasets, but million-book catalogs must use server-side pagination, search, filtering, and precomputed aggregates.
+
+## Scale Direction
+
+BookLens should be designed so the same conceptual structure can grow from a small portfolio dataset to millions of books.
+
+The current implementation is a deliberately small batch MVP:
+
+- Python collects and enriches data offline.
+- Supabase stores canonical books, tags, recommendations, and provenance.
+- The frontend reads public data from Supabase with fixture fallback.
+- Recommendations and analytics are precomputed or derived from loaded rows.
+
+That shape can scale, but not by loading every book into the browser or recomputing similarity at request time. At large scale, keep the same boundaries and evolve the internals:
+
+- Ingestion remains batch-oriented and resumable.
+- Provider records remain traceable through `book_sources`, `book_isbns`, and ingestion audit tables.
+- The app reads from indexed read models, not raw provider payloads.
+- Search, filtering, recommendations, and analytics are served from precomputed tables or search indexes.
+- Browser responses are paginated and bounded.
+
+### Million-Book Read Path
+
+For millions of books, the frontend should not query `select * from books_with_tags`.
+
+Target read pattern:
+
+1. Server-side search endpoint, Supabase RPC, or Postgres view accepts search/filter/sort/page parameters.
+2. Query uses indexes and returns one page of compact book cards.
+3. Detail pages fetch one book plus a small recommendation set.
+4. Analytics pages read precomputed aggregate tables, not all books.
+5. The browser never needs the whole catalog in memory.
+
+Recommended future indexes/read models:
+
+- `books(title)` or full-text `tsvector` index for title/author/description search
+- `book_tags(tag, book_id)` for tag filters
+- `books(publication_year)`, `books(page_count)`, and `books(average_rating)` for range filters
+- `book_recommendations(book_id, score desc)` for detail recommendations
+- materialized or maintained tables for `top_tags`, decade counts, rating distributions, and other analytics
+
+### Million-Book Write Path
+
+For large imports, do not upsert one row at a time forever.
+
+Target ingestion pattern:
+
+1. Collect raw provider pages into provider-specific raw files or object storage.
+2. Normalize into staging tables or chunked CSV/Parquet files.
+3. Match and merge in batches using ISBN/provider IDs first.
+4. Bulk load into staging tables.
+5. Upsert canonical tables in transactions per chunk.
+6. Record every batch in `ingestion_runs`.
+7. Refresh recommendation and analytics read models after successful batches.
+
+Recommended future tables:
+
+- `provider_raw_records` or external raw storage manifests for raw payload provenance
+- `book_search_documents` for search-ready text and denormalized fields
+- `book_similarity_jobs` for offline recommendation computation status
+- `book_analytics_snapshots` for precomputed dashboard aggregates
+
+### Recommendation Scale
+
+The current TF-IDF similarity approach is fine for hundreds or low thousands of books. For millions of books:
+
+- compute recommendations offline in batches
+- store only top N recommendations per book
+- avoid full pairwise similarity across the whole catalog
+- use candidate generation first, such as shared tags, author, publication era, ISBN/work clusters, or vector/search index candidates
+- keep reason chips generated and stored with each recommendation
+
+The product contract stays the same: detail pages show a small, explainable set of similar books. The computation strategy changes behind the scenes.
 
 ## Source Priority
 
@@ -399,6 +472,35 @@ Acceptance criteria:
 - Re-running imports is idempotent.
 - No raw data or secrets are committed.
 
+### Phase 15: Scalable Read Models
+
+Goal: prepare the app architecture for catalogs that are too large to load into the browser.
+
+Tasks:
+
+1. Add server-side/paginated book reads:
+   - search query
+   - tag filters
+   - year/page/rating filters
+   - sort
+   - limit/offset or cursor pagination
+2. Add supporting SQL indexes or RPC functions.
+3. Keep the current small fixture fallback for local development.
+4. Replace client-side all-books filtering with server-backed result pages when Supabase is configured.
+5. Keep detail pages fetching only:
+   - one selected book
+   - its tags
+   - its top recommendations
+6. Move analytics to precomputed aggregate reads if live row counts become large.
+
+Acceptance criteria:
+
+- The app does not need to load the full catalog for explorer search.
+- Query responses are bounded and paginated.
+- Existing UX remains usable for small fixture fallback.
+- Database indexes match the filter and sort paths used by the UI.
+- The plan remains compatible with million-book catalogs.
+
 ## Environment Variables
 
 Add these only as needed.
@@ -437,6 +539,12 @@ Later:
 uv run python scripts/enrich_google_books.py --input data/raw/openlibrary_books.csv --out data/raw/google_books_enriched.csv
 make live-seed-small
 make live-seed-openlibrary
+```
+
+Million-book architecture target:
+
+```text
+batch ingestion -> staging/provenance -> canonical books -> indexed read models -> paginated frontend
 ```
 
 ## Guardrails
