@@ -72,7 +72,7 @@ on conflict (id) do update set
   updated_at = now()
 """
 
-TAG_DELETE = "delete from public.book_tags where book_id = %s"
+TAG_DELETE = "delete from public.book_tags where book_id = any(%s)"
 
 TAG_INSERT = """
 insert into public.book_tags (book_id, tag)
@@ -170,7 +170,7 @@ set
 where id = %s
 """
 
-BOOK_EXISTS = "select 1 from public.books where id = %s"
+EXISTING_BOOK_IDS = "select id from public.books where id = any(%s)"
 
 BOOK_PAYLOAD_KEYS = {
     "id",
@@ -528,6 +528,15 @@ def seed_supabase(
     try:
         with psycopg.connect(database_url) as conn:
             with conn.cursor() as cur:
+                existing_book_ids: set[str] = set()
+                if seeded_book_ids:
+                    cur.execute(EXISTING_BOOK_IDS, (seeded_book_ids,))
+                    existing_book_ids = {row[0] for row in cur.fetchall()}
+
+                tag_rows: list[tuple[str, str]] = []
+                source_rows: list[dict[str, Any]] = []
+                isbn_rows: list[tuple[str, str, str | None, str | None]] = []
+
                 for book in books:
                     book_id = book.get("id")
                     if not book_id:
@@ -540,22 +549,16 @@ def seed_supabase(
                     source = book.get("source")
                     source_id = book.get("source_id")
 
-                    cur.execute(BOOK_EXISTS, (book_id,))
-                    existed = cur.fetchone() is not None
-
                     cur.execute(BOOK_UPSERT, book_upsert_payload(book))
-                    if existed:
+                    if book_id in existing_book_ids:
                         updated_count += 1
                     else:
                         inserted_count += 1
 
-                    cur.execute(TAG_DELETE, (book_id,))
-                    for tag in tags:
-                        cur.execute(TAG_INSERT, (book_id, tag))
+                    tag_rows.extend((book_id, tag) for tag in tags)
 
                     if source and source_id:
-                        cur.execute(
-                            BOOK_SOURCE_UPSERT,
+                        source_rows.append(
                             {
                                 "book_id": book_id,
                                 "provider": source,
@@ -564,11 +567,9 @@ def seed_supabase(
                                 "raw_payload": None,
                             },
                         )
-                        source_count += 1
 
                     for extra_source in extra_sources:
-                        cur.execute(
-                            BOOK_SOURCE_UPSERT,
+                        source_rows.append(
                             {
                                 "book_id": book_id,
                                 "provider": extra_source["provider"],
@@ -577,11 +578,9 @@ def seed_supabase(
                                 "raw_payload": None,
                             },
                         )
-                        source_count += 1
 
                     for isbn_record in isbns:
-                        cur.execute(
-                            BOOK_ISBN_UPSERT,
+                        isbn_rows.append(
                             (
                                 book_id,
                                 isbn_record["isbn"],
@@ -589,23 +588,40 @@ def seed_supabase(
                                 isbn_record.get("provider"),
                             ),
                         )
-                        if cur.rowcount:
-                            isbn_count += 1
-                        else:
-                            isbn_skipped_count += 1
+
+                if seeded_book_ids:
+                    cur.execute(TAG_DELETE, (seeded_book_ids,))
+
+                if tag_rows:
+                    cur.executemany(TAG_INSERT, tag_rows)
+
+                if source_rows:
+                    cur.executemany(BOOK_SOURCE_UPSERT, source_rows)
+                    source_count = len(source_rows)
+
+                if isbn_rows:
+                    cur.executemany(BOOK_ISBN_UPSERT, isbn_rows)
+                    if cur.rowcount >= 0:
+                        isbn_count = cur.rowcount
+                        isbn_skipped_count = len(isbn_rows) - isbn_count
+                    else:
+                        isbn_count = len(isbn_rows)
 
                 if seeded_book_ids:
                     cur.execute(RECOMMENDATION_DELETE, (seeded_book_ids,))
 
-                for recommendation in recommendations:
-                    cur.execute(
+                if recommendations:
+                    cur.executemany(
                         RECOMMENDATION_UPSERT,
-                        (
-                            recommendation["book_id"],
-                            recommendation["similar_book_id"],
-                            recommendation["score"],
-                            recommendation["reasons"],
-                        ),
+                        [
+                            (
+                                recommendation["book_id"],
+                                recommendation["similar_book_id"],
+                                recommendation["score"],
+                                recommendation["reasons"],
+                            )
+                            for recommendation in recommendations
+                        ],
                     )
 
             conn.commit()
