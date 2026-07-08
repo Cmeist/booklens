@@ -44,10 +44,9 @@ export default async function BookDetailPage({ params }: BookDetailPageProps) {
       ) : null}
 
       <div className={`${contentContainerClassName} max-w-4xl py-8`}>
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-700">BookLens</p>
-        <div className="mt-4 mb-6 flex flex-wrap items-center justify-between gap-3">
-          <Link href="/" className={linkClassName}>
-            ← Back to explorer
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <Link href="/explore" className={linkClassName}>
+            ← Back to explore
           </Link>
           <span className={dataBadgeClassName}>Data: {dataSourceLabel}</span>
         </div>

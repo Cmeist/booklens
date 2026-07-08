@@ -6,7 +6,6 @@ import {
   BookDetailPanel,
   BookListCard,
 } from "@/components/book-lens-shell";
-import { AnalyticsSection } from "@/components/analytics-section";
 import { ActiveFilterChips, FilterControls } from "@/components/filter-controls";
 import {
   buttonPrimaryClassName,
@@ -78,11 +77,8 @@ export function BookExplorer({ data, loadWarning }: BookExplorerProps) {
         <div className={`${contentContainerClassName} flex flex-col gap-4 py-5`}>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-700">
-                BookLens
-              </p>
               <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-                Book explorer
+                Explore
               </h1>
               <p className="mt-1 max-w-2xl text-sm text-slate-600">
                 Search, filter, and inspect explainable recommendations from the{" "}
@@ -147,7 +143,7 @@ export function BookExplorer({ data, loadWarning }: BookExplorerProps) {
         </div>
       </header>
 
-      <main className={`${contentContainerClassName} grid gap-6 py-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:gap-8`}>
+      <div className={`${contentContainerClassName} grid gap-6 py-6 pb-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:gap-8`}>
         <section aria-label="Book results" className="min-w-0">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-slate-900">Results</h2>
@@ -190,10 +186,6 @@ export function BookExplorer({ data, loadWarning }: BookExplorerProps) {
             Select a book to preview details and similar titles.
           </div>
         )}
-      </main>
-
-      <div className={`${contentContainerClassName} pb-10`}>
-        <AnalyticsSection books={books} topTags={topTags} source={source} />
       </div>
     </div>
   );

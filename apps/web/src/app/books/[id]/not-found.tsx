@@ -14,8 +14,8 @@ export default function BookNotFound() {
           That book id is not in the current dataset. Return to the explorer to browse available
           books.
         </p>
-        <Link href="/" className={`mt-6 ${buttonPrimaryClassName}`}>
-          Back to explorer
+        <Link href="/explore" className={`mt-6 ${buttonPrimaryClassName}`}>
+          Back to explore
         </Link>
       </div>
     </div>
