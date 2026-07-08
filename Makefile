@@ -1,4 +1,4 @@
-.PHONY: check-env pipeline-demo pipeline-openlibrary collect-openlibrary enrich-google-books seed-supabase web-dev web-build verify status
+.PHONY: check-env pipeline-demo pipeline-openlibrary collect-openlibrary enrich-google-books seed-supabase web-dev web-build vercel-deploy modal-deploy modal-refresh verify status
 
 check-env:
 	@echo "Checking tool paths..."
@@ -18,6 +18,7 @@ CONTACT ?=
 LIMIT_PER_SUBJECT ?= 15
 LIMIT_TOTAL ?= 120
 SUBJECTS ?= fantasy,science_fiction,romance,mystery,thriller,historical_fiction,young_adult,classics,biography,literary_fiction
+NODE_DIR ?= /home/coy/.nvm/versions/node/v20.20.2/bin
 
 collect-openlibrary:
 	uv run python scripts/collect_openlibrary.py \
@@ -39,6 +40,15 @@ web-dev:
 
 web-build:
 	cd apps/web && npm run build
+
+vercel-deploy:
+	cd apps/web && PATH=$(NODE_DIR):$(PATH) npx vercel --prod
+
+modal-deploy:
+	uv run modal deploy modal_app.py
+
+modal-refresh:
+	uv run modal run modal_app.py --limit-total $(LIMIT_TOTAL) --limit-per-subject $(LIMIT_PER_SUBJECT)
 
 verify: pipeline-demo
 	uv run ruff check scripts/

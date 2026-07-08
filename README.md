@@ -12,9 +12,9 @@ This repo ships a **Supabase-backed MVP** with a committed fixture fallback:
 4. `make seed-supabase` loads books, tags, and recommendations into Supabase (server-only `SUPABASE_DB_URL`).
 5. The Next.js app reads from Supabase when `NEXT_PUBLIC_SUPABASE_*` env vars are set; otherwise it uses the committed sample JSON.
 
-**Not in scope:** FastAPI, Modal, Supabase Auth, Supabase Storage, LiteLLM, or user accounts.
+**Not in scope:** FastAPI, Supabase Auth, Supabase Storage, LiteLLM, or user accounts.
 
-See `docs/PLAN.md` for the phased build plan, `docs/LIVE_DATA_PLAN.md` for live Open Library ingestion, `supabase/README.md` for database setup, and `docs/DESIGN.md` for product goals.
+See `docs/PLAN.md` for the phased build plan, `docs/LIVE_DATA_PLAN.md` for live Open Library ingestion, `docs/DEPLOYMENT.md` for Vercel + Modal setup, `supabase/README.md` for database setup, and `docs/DESIGN.md` for product goals.
 
 ## Repo structure
 
@@ -32,6 +32,7 @@ booklens/
 │   ├── run_pipeline.py    # Demo pipeline (writes sample processed data)
 │   ├── collect_openlibrary.py
 │   └── seed_supabase.py   # Upsert fixture/processed data into Supabase
+├── modal_app.py           # Modal data-refresh jobs
 ├── supabase/
 │   ├── migrations/        # Committed SQL schema
 │   └── README.md          # Supabase setup, migrations, and seed workflow
@@ -94,6 +95,9 @@ From the repo root:
 | `make seed-supabase` | Upsert sample JSON into Supabase (`SUPABASE_DB_URL` required) |
 | `make web-dev` | Start the Next.js dev server |
 | `make web-build` | Production build of the web app |
+| `make vercel-deploy` | Deploy `apps/web` to Vercel with `npx vercel --prod` |
+| `make modal-deploy` | Deploy the Modal data jobs |
+| `make modal-refresh` | Run the Modal Open Library refresh job |
 | `make verify` | Run all MVP verification commands (see below) |
 | `make status` | Show `git status` |
 | `uv run ruff check scripts/` | Lint Python pipeline/seed scripts |
@@ -148,6 +152,8 @@ make verify
 Supabase setup: [`supabase/README.md`](supabase/README.md)
 
 ## Deploy to Vercel
+
+Full Vercel + Modal setup: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 1. Import the Git repository in [Vercel](https://vercel.com).
 2. Set **Root Directory** to `apps/web`.
