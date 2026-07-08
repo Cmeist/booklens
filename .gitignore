@@ -21,6 +21,7 @@ data/processed/
 .agents/
 .cursor/
 skills-lock.json
+review-plan-before-composer-v2.zip
 
 # System files
 .DS_Store
