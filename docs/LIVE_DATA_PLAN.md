@@ -12,8 +12,13 @@ Already available:
 - `scripts/collect_openlibrary.py` for Open Library subject collection
 - `scripts/run_pipeline.py` for cleaning, recommendations, CSV export, and JSON fixtures
 - `scripts/seed_supabase.py` for seeding Supabase from sample JSON or processed CSV
+- `scripts/enrich_openlibrary_ratings.py` for Open Library work-level community ratings
+- `scripts/enrich_openlibrary_pages.py` for edition-derived page count fills
+- `scripts/enrich_google_books.py` for Google Books fill-missing metadata and ISBN/source enrichment
+- `scripts/import_popularity_signals.py` for optional NYT bestseller/list signals (`book_popularity_signals`)
 - `make pipeline-demo`
 - `make seed-supabase`
+- `make import-popularity-signals`
 - `make verify`
 - Next.js app reading Supabase with fixture fallback
 
@@ -21,6 +26,29 @@ Main limitation:
 
 - The current schema tracks only one `source` and `source_id` per book. That is enough for a single Open Library seed, but it is too thin for multi-API enrichment.
 - The current frontend loads the complete book set into the browser. That is fine for the MVP and portfolio-scale datasets, but million-book catalogs must use server-side pagination, search, filtering, and precomputed aggregates.
+- User profile, logging, compatibility scoring, and tag UX are active frontend work areas. Live-data phases must not refactor those flows unless a phase explicitly says so.
+
+## Composer Execution Notes
+
+Use this document as a plan for data and deployment agents, not as permission to implement every future idea at once.
+
+Before editing for any phase:
+
+1. Run `git status --short` and identify unrelated dirty files. Preserve them.
+2. Read the files named in that phase's scope before editing.
+3. Confirm whether generated files under `data/raw/`, `data/processed/`, or `apps/web/src/data/*.sample.json` are dirty. Do not commit generated live data unless the project owner explicitly asks.
+4. Keep secrets in `.env`, `.env.local`, Supabase secrets, or Modal secrets only. Never print secret values in handoff.
+5. If a phase needs live API calls, run the smallest smoke test first (`LIMIT=3` or `LIMIT_TOTAL=5`) and report exact row counts.
+6. If a phase needs hosted Supabase writes, use `SUPABASE_DB_URL` from local/server-only environment only. Never add it to Vercel.
+
+Stop and ask before:
+
+- adding a new paid API provider
+- changing the canonical `books` table shape in a way that requires frontend rewrites
+- deleting or replacing hosted Supabase data
+- committing generated data files
+- running large API harvests beyond the phase's requested limits
+- adding auth, user tables, FastAPI, LiteLLM, or browser-side provider API calls
 
 ## Scale Direction
 
@@ -100,7 +128,7 @@ Use sources in this order.
 
 ### 1. Open Library
 
-Role: primary discovery source.
+Role: primary discovery source **and primary ratings source**.
 
 Use for:
 
@@ -111,6 +139,7 @@ Use for:
 - First publication year
 - Cover IDs and cover URLs
 - Open Library work IDs
+- Community star ratings (`ratings_average`, `ratings_count`) via Search API or `/works/{id}/ratings.json`
 
 Notes:
 
@@ -118,10 +147,11 @@ Notes:
 - Keep rate limits conservative.
 - Cache raw responses locally under `data/raw/`.
 - Do not use Open Library as a high-volume production backend.
+- Ratings attach to **works**, not editions. Match on existing `source_id` (`/works/OL…W`).
 
 ### 2. Google Books
 
-Role: optional metadata enrichment.
+Role: optional metadata enrichment; **secondary** ratings source.
 
 Use for:
 
@@ -131,7 +161,7 @@ Use for:
 - Category hints
 - Image links
 - ISBNs and industry identifiers
-- Ratings only if present and clearly sourced
+- `volumeInfo.averageRating` / `ratingsCount` when present
 
 Notes:
 
@@ -139,6 +169,7 @@ Notes:
 - Do not expose the key to Next.js.
 - Treat Google Books volume IDs as provider IDs, not canonical app IDs.
 - Match by ISBN first, then normalized title plus author.
+- Google ratings coverage is thin on ISBN-matched classics; do not rely on it as the primary fill.
 
 ### 3. New York Times Books API Or Similar Bestseller Sources
 
@@ -155,6 +186,29 @@ Notes:
 - Use only if the API terms and quota are acceptable.
 - Store list/rank information separately from core book metadata.
 - Do not overwrite bibliographic fields just because a popularity source has a partial title.
+
+### Ratings API survey (2026-07)
+
+Spike on the live ~1.1k catalog (sample n=50 each):
+
+| Source | Match key | Ratings hit rate | Notes |
+|--------|-----------|------------------|-------|
+| Open Library Search `ratings_*` | work id | **80%** (40/50 with `ratings_count > 0`) | Best primary source |
+| Google Books Volumes | ISBN from enriched CSV | **4%** overall (2/50); 20% of volume matches | Weak; keep as upgrade only |
+| Hardcover GraphQL | ISBN / title | Not spiked | Optional Phase 2 if OL gaps remain |
+| Goodreads | — | N/A | Public API shut down; do not scrape |
+| NYT Books | ISBN / lists | N/A for stars | Bestseller / critic signal only |
+
+**Merge rule for `books.average_rating` / `books.rating_count`:**
+
+1. Prefer Open Library ratings when present.
+2. If Google also has ratings, keep the pair with the **higher `rating_count`** (replace both average and count together).
+3. Never fabricate ratings. Leave null when no source has a positive count.
+4. Do not store full user review text in MVP (PLAN non-goal). Aggregate stars only.
+
+**Pipeline order:** `run_pipeline` → `enrich_openlibrary_ratings` → `enrich_google_books` → `enrich_openlibrary_pages` (fill remaining `page_count`) → seed.
+
+**Page count merge:** Google Books first when present; Open Library editions median `number_of_pages` fills nulls only (`overwrite=False`). No separate pacing column — UI/compatibility derive Short/Medium/Long from pages (`<250` / `250–450` / `>450`). Profile `pace` maps to length when `preferredLength` is `any` (`fast`→short, `moderate`→medium, `slow`→long).
 
 ## Data Model Direction
 
@@ -290,6 +344,7 @@ Completed phases:
 1. Phase 10: Real Open Library Seed
 2. Phase 11: Provider Identity Tables
 3. Phase 12: Google Books Enrichment
+4. Phase 13: Popularity Signals
 
 ### Phase 10: Real Open Library Seed
 
@@ -426,7 +481,9 @@ Workflow:
 
 ```bash
 make pipeline-openlibrary
+make enrich-openlibrary-ratings
 make enrich-google-books
+make enrich-openlibrary-pages
 make seed-supabase SOURCE=csv
 ```
 
@@ -440,22 +497,102 @@ make enrich-google-books LIMIT=3
 
 Goal: add optional popularity/list context without polluting core metadata.
 
-Tasks:
+**Status: implemented (report-only smoke ready; hosted write opt-in).**
 
-1. Choose one popularity source after checking terms and quota.
-2. Add a separate table if needed, such as `book_popularity_signals`.
-3. Store provider, list name, rank, date, and matched `book_id`.
-4. Use popularity as a future sort/filter signal, not as a replacement for recommendations.
+Scope:
+
+- May edit: `supabase/migrations/*`, `scripts/*popularity*.py`, `Makefile`, `docs/LIVE_DATA_PLAN.md`, `supabase/README.md`, `.env.example`
+- Must not edit: Next.js UI, profile/compatibility components, existing enrichment merge rules, Vercel public env names
+- Must not overwrite: `books.title`, `books.author`, `books.description`, `books.page_count`, `books.average_rating`, or `books.rating_count`
+
+#### Provider choice
+
+- **Chosen source:** New York Times Books API bestseller lists only
+- **Terms:** Developer Portal non-commercial use; attribution required ([Terms](https://developer.nytimes.com/tou), [FAQ](https://developer.nytimes.com/faq))
+- **Quota:** typically 500 requests/day and 5 requests/minute (script defaults to 12s sleep between list calls)
+- **Not chosen:** paid commercial licensing, scraping Goodreads, or any source that would overwrite bibliographic fields
+
+#### Delivered artifacts
+
+- Migration: `supabase/migrations/20260713160000_book_popularity_signals.sql`
+- Importer: `scripts/import_popularity_signals.py`
+- Offline fixture: `scripts/fixtures/nyt_hardcover_fiction_sample.json`
+- Make target: `make import-popularity-signals`
+- Env placeholder: `NYT_BOOKS_API_KEY` in `.env.example` (server-only)
+
+#### Matching
+
+Auto-import only strong/medium matches from this plan:
+
+- strong: shared ISBN
+- medium: normalized title + first author (publication years within 3 when both exist)
+- weak: title-only — written to the review report, never auto-imported
+
+Core `books.*` fields are never updated by this importer.
+
+#### Commands
+
+```bash
+# Offline smoke (no live API, no DB write)
+make import-popularity-signals LIMIT=3 FROM_JSON=scripts/fixtures/nyt_hardcover_fiction_sample.json
+
+# Live API smoke (requires NYT_BOOKS_API_KEY; no DB write)
+make import-popularity-signals LIMIT=3
+
+# After migration apply + explicit approval only
+make import-popularity-signals LIMIT=3 WRITE_DB=1
+```
+
+Outputs:
+
+- `data/processed/popularity_signals_report.json`
+- `data/processed/popularity_signals_report.txt`
 
 Acceptance criteria:
 
 - Popularity imports do not overwrite core book fields.
 - Unmatched popularity rows are reported.
 - Frontend remains usable if popularity data is absent.
+- Migration is idempotent/reviewable and does not expose server-only raw payloads through anon policies.
+- Smoke import can run on a tiny sample before any larger import.
+
+Validation:
+
+```bash
+uv run ruff check scripts/
+make pipeline-demo
+cd apps/web && npm run lint
+cd apps/web && npm run build
+```
+
+Hosted DB verification after applying the migration/import:
+
+```sql
+select count(*) from public.book_popularity_signals;
+select provider, list_name, count(*) from public.book_popularity_signals group by provider, list_name order by count(*) desc;
+```
 
 ### Phase 14: Refresh Workflow
 
 Goal: make repeat imports boring and safe.
+
+Scope:
+
+- May edit: `Makefile`, `modal_app.py`, import/enrichment scripts, `docs/DEPLOYMENT.md`, `docs/LOCAL_DEV_WSL_CURSOR.md`, `supabase/README.md`, `docs/LIVE_DATA_PLAN.md`
+- Must not edit: frontend routes/components except docs links if absolutely necessary
+- Must not commit: `data/raw/*`, `data/processed/*`, `.env`, `.env.local`
+
+Preflight reads:
+
+- `Makefile`
+- `modal_app.py`
+- `scripts/collect_openlibrary.py`
+- `scripts/run_pipeline.py`
+- `scripts/enrich_openlibrary_ratings.py`
+- `scripts/enrich_google_books.py`
+- `scripts/enrich_openlibrary_pages.py`
+- `scripts/seed_supabase.py`
+- `docs/DEPLOYMENT.md`
 
 Tasks:
 
@@ -464,6 +601,17 @@ Tasks:
 3. Add dry-run flags to import scripts.
 4. Add import summaries to `ingestion_runs`.
 5. Document the hosted Supabase workflow.
+6. Ensure Make targets run the expected order:
+   - collect
+   - pipeline
+   - Open Library ratings
+   - Google Books enrichment when key is present
+   - Open Library pages
+   - seed
+7. For `live-seed-small`, use conservative defaults (`LIMIT_TOTAL=5`, `LIMIT_PER_SUBJECT=1`, optional `LIMIT=3` enrichers).
+8. For `live-seed-openlibrary`, use the configured defaults unless caller overrides `LIMIT_TOTAL`, `LIMIT_PER_SUBJECT`, or `SUBJECTS`.
+9. If adding `--dry-run`, it must preview work and write reports without changing Supabase.
+10. If `seed_supabase.py` gets `--dry-run`, it must not open a write transaction or mutate hosted rows.
 
 Acceptance criteria:
 
@@ -471,10 +619,40 @@ Acceptance criteria:
 - Every import has a summary.
 - Re-running imports is idempotent.
 - No raw data or secrets are committed.
+- Failure at any stage leaves a readable report or console summary with the failing stage.
+- Hosted Supabase seed count can be verified with SQL before and after.
+
+Validation:
+
+```bash
+uv run ruff check scripts/
+make pipeline-demo
+make live-seed-small   # only if CONTACT/SUPABASE_DB_URL are configured and the project owner wants a live smoke write
+cd apps/web && npm run lint
+cd apps/web && npm run build
+```
+
+If live writes are skipped, say so in the handoff and include the exact command the project owner should run.
 
 ### Phase 15: Scalable Read Models
 
 Goal: prepare the app architecture for catalogs that are too large to load into the browser.
+
+Scope:
+
+- May edit: Supabase migrations, server-side data loaders under `apps/web/src/lib`, app routes that currently call `loadBookLensData`, docs
+- Must preserve: fixture fallback, `/books/[id]`, `/explore`, `/analytics`, `/compatibility`, `/profile`
+- Must not add: FastAPI, a separate backend service, Supabase Auth, browser-side service keys, provider API calls from the browser
+
+Preflight reads:
+
+- `apps/web/src/lib/load-booklens-data.ts`
+- `apps/web/src/lib/booklens-data.ts`
+- `apps/web/src/components/book-explorer.tsx`
+- `apps/web/src/components/analytics-section.tsx`
+- `apps/web/src/components/compatibility-page.tsx`
+- `supabase/migrations/*initial*schema.sql`
+- `supabase/migrations/20260703150000_provider_identity_tables.sql`
 
 Tasks:
 
@@ -492,6 +670,13 @@ Tasks:
    - its tags
    - its top recommendations
 6. Move analytics to precomputed aggregate reads if live row counts become large.
+7. Keep small fixture mode client-side so local/demo usage still works without Supabase.
+8. Add bounded query defaults:
+   - default page size no larger than 50
+   - maximum page size no larger than 100
+   - deterministic sort order for pagination
+9. Add database indexes or RPC functions in the same phase as the query paths that need them.
+10. Do not introduce full-catalog JSON payloads in server responses.
 
 Acceptance criteria:
 
@@ -500,6 +685,23 @@ Acceptance criteria:
 - Existing UX remains usable for small fixture fallback.
 - Database indexes match the filter and sort paths used by the UI.
 - The plan remains compatible with million-book catalogs.
+- Detail and compatibility pages never fetch the entire catalog unless running in fixture fallback mode.
+- Analytics reads aggregate snapshots or bounded summaries, not all book rows, once live counts are large.
+
+Validation:
+
+```bash
+cd apps/web && npm run lint
+cd apps/web && npm run build
+```
+
+Manual checks:
+
+- `/explore` loads first page only when Supabase is configured.
+- Search, include tags, exclude tags, year/page/rating filters, and pagination compose correctly.
+- `/books/[id]` fetches one book plus recommendations.
+- Fixture fallback still works with no Supabase env vars.
+- Network payloads stay bounded as the live catalog grows.
 
 ## Environment Variables
 
@@ -528,7 +730,10 @@ Planned command shape:
 ```bash
 make collect-openlibrary
 make pipeline-openlibrary
+make enrich-openlibrary-ratings
 make enrich-google-books
+make enrich-openlibrary-pages
+make import-popularity-signals LIMIT=3
 make seed-supabase SOURCE=csv
 make verify
 ```
@@ -536,7 +741,7 @@ make verify
 Later:
 
 ```bash
-uv run python scripts/enrich_google_books.py --input data/raw/openlibrary_books.csv --out data/raw/google_books_enriched.csv
+uv run python scripts/enrich_google_books.py --input data/processed/books_clean.csv --output data/processed/books_enriched.csv
 make live-seed-small
 make live-seed-openlibrary
 ```
@@ -551,12 +756,15 @@ batch ingestion -> staging/provenance -> canonical books -> indexed read models 
 
 - Keep `.env`, `data/raw/`, and `data/processed/` ignored.
 - Do not commit generated live data.
+- Treat `apps/web/src/data/*.sample.json` as committed fixture data. Do not replace it with a large live dump unless the project owner explicitly asks.
 - Do not add third-party API calls to browser code.
 - Do not store server-only keys in Vercel unless the code path truly runs server-only.
 - Do not bulk-harvest APIs. Use small, respectful imports and cache raw responses.
 - Do not silently merge weak matches.
 - Do not fabricate ratings, page counts, ISBNs, or publication years.
 - Keep fixture fallback working.
+- Preserve unrelated user/Cursor changes. If the working tree is dirty, only edit files in the current phase scope.
+- Prefer reports and row-count verification over guessing whether a live import worked.
 
 ## Phase 10 Cursor Prompt
 

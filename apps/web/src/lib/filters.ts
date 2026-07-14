@@ -2,7 +2,8 @@ import type { Book } from "./types";
 
 export type BookFilters = {
   searchQuery: string;
-  tag: string | null;
+  includeTags: string[];
+  excludeTags: string[];
   decade: string | null;
   minPageCount: number | null;
   maxPageCount: number | null;
@@ -13,11 +14,13 @@ export type BookFilters = {
 export type ActiveFilterChip = {
   key: keyof BookFilters;
   label: string;
+  value?: string;
 };
 
 export const defaultBookFilters: BookFilters = {
   searchQuery: "",
-  tag: null,
+  includeTags: [],
+  excludeTags: [],
   decade: null,
   minPageCount: null,
   maxPageCount: null,
@@ -48,9 +51,18 @@ export function bookMatchesFilters(book: Book, filters: BookFilters): boolean {
     }
   }
 
-  if (filters.tag !== null) {
-    const matchesTag = book.tags.some((tag) => tag.toLowerCase() === filters.tag);
-    if (!matchesTag) {
+  const bookTags = new Set(book.tags.map((tag) => tag.toLowerCase()));
+
+  if (filters.includeTags.length > 0) {
+    const includesEveryTag = filters.includeTags.every((tag) => bookTags.has(tag));
+    if (!includesEveryTag) {
+      return false;
+    }
+  }
+
+  if (filters.excludeTags.length > 0) {
+    const hasExcludedTag = filters.excludeTags.some((tag) => bookTags.has(tag));
+    if (hasExcludedTag) {
       return false;
     }
   }
@@ -100,8 +112,12 @@ export function getActiveFilterChips(filters: BookFilters): ActiveFilterChip[] {
     chips.push({ key: "searchQuery", label: `Search: ${search}` });
   }
 
-  if (filters.tag) {
-    chips.push({ key: "tag", label: `Tag: ${filters.tag}` });
+  for (const tag of filters.includeTags) {
+    chips.push({ key: "includeTags", label: `Includes: ${tag}`, value: tag });
+  }
+
+  for (const tag of filters.excludeTags) {
+    chips.push({ key: "excludeTags", label: `Excludes: ${tag}`, value: tag });
   }
 
   if (filters.decade) {
@@ -136,12 +152,26 @@ export function getActiveFilterChips(filters: BookFilters): ActiveFilterChip[] {
   return chips;
 }
 
-export function clearFilterChip(filters: BookFilters, key: ActiveFilterChip["key"]): BookFilters {
+export function clearFilterChip(filters: BookFilters, chip: ActiveFilterChip): BookFilters {
+  const { key, value } = chip;
+
   switch (key) {
     case "searchQuery":
       return { ...filters, searchQuery: "" };
-    case "tag":
-      return { ...filters, tag: null };
+    case "includeTags":
+      return {
+        ...filters,
+        includeTags: value
+          ? filters.includeTags.filter((tag) => tag !== value)
+          : [],
+      };
+    case "excludeTags":
+      return {
+        ...filters,
+        excludeTags: value
+          ? filters.excludeTags.filter((tag) => tag !== value)
+          : [],
+      };
     case "decade":
       return { ...filters, decade: null };
     case "minPageCount":

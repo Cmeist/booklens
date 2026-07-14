@@ -1,4 +1,4 @@
-.PHONY: check-env pipeline-demo pipeline-openlibrary collect-openlibrary enrich-google-books seed-supabase web-dev web-build vercel-deploy modal-deploy modal-refresh verify status
+.PHONY: check-env pipeline-demo pipeline-openlibrary collect-openlibrary enrich-openlibrary-ratings enrich-openlibrary-pages enrich-google-books import-popularity-signals seed-supabase web-dev web-build vercel-deploy modal-deploy modal-refresh verify status
 
 check-env:
 	@echo "Checking tool paths..."
@@ -29,8 +29,23 @@ collect-openlibrary:
 		--sleep-seconds 0.25 \
 		--out data/raw/openlibrary_books.csv
 
+enrich-openlibrary-ratings:
+	uv run python scripts/enrich_openlibrary_ratings.py $(if $(LIMIT),--limit $(LIMIT),)
+
+enrich-openlibrary-pages:
+	uv run python scripts/enrich_openlibrary_pages.py $(if $(LIMIT),--limit $(LIMIT),)
+
 enrich-google-books:
 	uv run python scripts/enrich_google_books.py $(if $(LIMIT),--limit $(LIMIT),)
+
+# Popularity signals (NYT Books API). Smoke: LIMIT=3. Never overwrites core books.*.
+# Default is report-only. Pass WRITE_DB=1 only after migration apply + explicit approval.
+import-popularity-signals:
+	uv run python scripts/import_popularity_signals.py \
+		$(if $(LIMIT),--limit $(LIMIT),) \
+		$(if $(LISTS),--lists "$(LISTS)",) \
+		$(if $(FROM_JSON),--from-json "$(FROM_JSON)",) \
+		$(if $(filter 1 true TRUE yes YES,$(WRITE_DB)),--write-db,)
 
 seed-supabase:
 	uv run python scripts/seed_supabase.py $(if $(SOURCE),--source $(SOURCE),)

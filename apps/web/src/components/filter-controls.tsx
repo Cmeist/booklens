@@ -22,9 +22,9 @@ const MIN_RATING_COUNT_OPTIONS = [
 
 const PAGE_COUNT_PRESETS = [
   { value: "", label: "Any length" },
-  { value: "0-300", label: "Up to 300 pages" },
-  { value: "250-400", label: "250–400 pages" },
-  { value: "400-9999", label: "400+ pages" },
+  { value: "0-249", label: "Short (under 250)" },
+  { value: "250-450", label: "Medium (250–450)" },
+  { value: "451-9999", label: "Long (451+)" },
 ];
 
 function parsePageCountPreset(value: string): Pick<BookFilters, "minPageCount" | "maxPageCount"> {
@@ -164,7 +164,7 @@ export function ActiveFilterChips({
   onClearAll,
 }: {
   filters: BookFilters;
-  onClearChip: (key: ActiveFilterChip["key"]) => void;
+  onClearChip: (chip: ActiveFilterChip) => void;
   onClearAll: () => void;
 }) {
   const chips = getActiveFilterChips(filters);
@@ -181,7 +181,7 @@ export function ActiveFilterChips({
         <button
           key={`${chip.key}-${chip.label}`}
           type="button"
-          onClick={() => onClearChip(chip.key)}
+          onClick={() => onClearChip(chip)}
           className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
         >
           {chip.label}

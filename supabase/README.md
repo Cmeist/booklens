@@ -17,6 +17,10 @@ If those vars are absent (for example on a fresh Vercel deploy without configura
   - `book_sources` — maps canonical `book_id` to provider IDs (server-only RLS)
   - `book_isbns` — normalized ISBNs for cross-provider matching (server-only RLS)
   - `ingestion_runs` — audit log for seed/import attempts (server-only RLS)
+- `migrations/20260713160000_book_popularity_signals.sql`
+  - `book_popularity_signals` — optional bestseller/list context (server-only RLS)
+  - Does not alter core `books` columns
+  - No anon select policies (frontend stays usable without this table)
 
 ## Prerequisites
 
@@ -48,10 +52,12 @@ Do **not** set `SUPABASE_DB_URL` on Vercel. Seed and import scripts use it local
 
 These must never be prefixed with `NEXT_PUBLIC_` and must never ship to browser code:
 
-- `SUPABASE_DB_URL` — Postgres connection string used by `scripts/seed_supabase.py`
+- `SUPABASE_DB_URL` — Postgres connection string used by `scripts/seed_supabase.py` and `scripts/import_popularity_signals.py --write-db`
 - `SUPABASE_SERVICE_ROLE_KEY` — optional for future server-only tooling
 - `SUPABASE_URL` — optional server-side project URL
 - `SUPABASE_ANON_KEY` — optional server-side anon key copy
+- `GOOGLE_BOOKS_API_KEY` — optional Google Books enrichment
+- `NYT_BOOKS_API_KEY` — optional NYT Books API popularity import (non-commercial; ~500/day, 5/min)
 
 For Phase 5 seeding, set `SUPABASE_DB_URL` only.
 
@@ -170,6 +176,64 @@ Primary `books.source` and `books.source_id` remain the Open Library values.
 
 See `docs/LIVE_DATA_PLAN.md` for the full live-data workflow and quality report details.
 
+## Popularity signals (NYT Books API)
+
+Phase 13 stores optional bestseller/list context in `book_popularity_signals`. It never writes to core `books` columns (`title`, `author`, `description`, `page_count`, `average_rating`, `rating_count`).
+
+### Provider choice
+
+- **Source:** New York Times Books API bestseller lists only
+- **Terms:** non-commercial Developer Portal use; attribution required
+- **Quota:** typically 500 requests/day and 5 requests/minute (sleep ~12s between list calls)
+- **Key:** `NYT_BOOKS_API_KEY` in repo-root `.env` (server-only, never `NEXT_PUBLIC_`)
+
+### Workflow
+
+1. Apply migrations (includes `20260713160000_book_popularity_signals.sql`).
+2. Ensure a catalog CSV exists (`data/processed/books_enriched.csv` preferred, else `books_clean.csv`).
+3. Smoke match/report (no DB write):
+
+```bash
+# Offline fixture smoke (no live API)
+make import-popularity-signals LIMIT=3 FROM_JSON=scripts/fixtures/nyt_hardcover_fiction_sample.json
+
+# Live API smoke (requires NYT_BOOKS_API_KEY)
+make import-popularity-signals LIMIT=3
+```
+
+4. Review:
+
+- `data/processed/popularity_signals_report.json`
+- `data/processed/popularity_signals_report.txt`
+
+5. Hosted DB write only after explicit approval (asks before large harvests / hosted deletes):
+
+```bash
+make import-popularity-signals LIMIT=3 WRITE_DB=1
+```
+
+Matching rules (auto-import strong/medium only):
+
+| Strength | Rule | Imported? |
+| --- | --- | --- |
+| strong | shared ISBN | yes |
+| medium | normalized title + first author | yes |
+| weak | title-only | report only |
+
+### Verify after import
+
+```sql
+select count(*) from public.book_popularity_signals;
+select provider, list_name, count(*)
+from public.book_popularity_signals
+group by provider, list_name
+order by count(*) desc;
+```
+
+| Table | Purpose | Anon access |
+| --- | --- | --- |
+| `book_popularity_signals` | NYT (or future) list/rank signals linked to `books.id` | None |
+
 ## Provenance tables
 
 Phase 11 adds server-only provenance tables. The frontend still reads only `books`, tags, recommendations, and views.
@@ -179,6 +243,7 @@ Phase 11 adds server-only provenance tables. The frontend still reads only `book
 | `book_sources` | Links each book to provider IDs (`openlibrary`, `demo`, etc.) | None |
 | `book_isbns` | Normalized ISBNs for future cross-provider matching | None |
 | `ingestion_runs` | Audit trail for each `seed_supabase.py` run | None |
+| `book_popularity_signals` | Optional NYT list/rank signals | None |
 
 `make seed-supabase` (JSON or CSV) upserts:
 

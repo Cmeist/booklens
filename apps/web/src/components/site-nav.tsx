@@ -8,8 +8,8 @@ import { contentContainerClassName } from "@/lib/ui";
 const navItems = [
   { href: "/", label: "Home" },
   { href: "/explore", label: "Explore" },
+  { href: "/profile", label: "Profile" },
   { href: "/compatibility", label: "Compatibility" },
-  { href: "/preferences", label: "Preferences" },
   { href: "/analytics", label: "Analytics" },
 ] as const;
 

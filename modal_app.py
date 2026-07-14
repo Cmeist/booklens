@@ -46,6 +46,8 @@ def refresh_openlibrary(
 
     from scripts.collect_openlibrary import collect_books, parse_subjects
     from scripts.enrich_google_books import PROCESSED_DIR, enrich_books
+    from scripts.enrich_openlibrary_pages import enrich_openlibrary_pages
+    from scripts.enrich_openlibrary_ratings import enrich_openlibrary_ratings
     from scripts.run_pipeline import RAW_DIR, run_pipeline
     from scripts.seed_supabase import load_csv_source, seed_supabase
 
@@ -76,7 +78,25 @@ def refresh_openlibrary(
 
     run_pipeline(use_openlibrary=True, input_path=None)
 
+    ratings_stats = enrich_openlibrary_ratings(
+        input_path=PROCESSED_DIR / "books_clean.csv",
+        output_path=PROCESSED_DIR / "books_clean.csv",
+        report_path=PROCESSED_DIR / "openlibrary_ratings_report.txt",
+        contact=contact,
+        limit=None,
+        sleep_seconds=sleep_seconds,
+        overwrite=False,
+    )
+    ratings_summary = {
+        "searched": ratings_stats.searched,
+        "filled": ratings_stats.filled,
+        "already_present": ratings_stats.already_present,
+        "missing": ratings_stats.missing,
+        "api_errors": ratings_stats.api_errors,
+    }
+
     enrichment_summary: dict[str, Any] | None = None
+    pages_input = PROCESSED_DIR / "books_clean.csv"
     if enrich_google_books:
         enrichment_report_path = PROCESSED_DIR / "google_books_enrichment_report.txt"
         enrichment_stats = enrich_books(
@@ -93,7 +113,25 @@ def refresh_openlibrary(
             "unmatched": enrichment_stats.unmatched,
             "api_errors": enrichment_stats.api_errors,
             "isbns_added": enrichment_stats.isbns_added,
+            "ratings_improved": enrichment_stats.fields_improved.get("rating_count", 0),
         }
+        pages_input = PROCESSED_DIR / "books_enriched.csv"
+
+    pages_stats = enrich_openlibrary_pages(
+        input_path=pages_input,
+        output_path=pages_input,
+        report_path=PROCESSED_DIR / "openlibrary_pages_report.txt",
+        contact=contact,
+        limit=None,
+        sleep_seconds=sleep_seconds,
+    )
+    pages_summary = {
+        "searched": pages_stats.searched,
+        "filled": pages_stats.filled,
+        "already_present": pages_stats.already_present,
+        "missing": pages_stats.missing,
+        "api_errors": pages_stats.api_errors,
+    }
 
     seeded_books, recommendations = load_csv_source()
     seed_supabase(seeded_books, recommendations, mode="csv")
@@ -102,6 +140,8 @@ def refresh_openlibrary(
         "collected_rows": len(books),
         "seeded_books": len(seeded_books),
         "recommendations": len(recommendations),
+        "ratings": ratings_summary,
+        "pages": pages_summary,
         "enrichment": enrichment_summary,
     }
 

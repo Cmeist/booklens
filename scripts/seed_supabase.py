@@ -405,17 +405,26 @@ def load_json_source() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
 def load_csv_source() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     enriched_path = PROCESSED_DIR / "books_enriched.csv"
     clean_path = PROCESSED_DIR / "books_clean.csv"
-    if enriched_path.exists() and (
-        not clean_path.exists() or enriched_path.stat().st_mtime >= clean_path.stat().st_mtime
-    ):
-        books_path = enriched_path
-    else:
-        books_path = clean_path
-        if enriched_path.exists() and clean_path.exists():
+    books_path = clean_path
+    if enriched_path.exists() and clean_path.exists():
+        enriched_rows = sum(1 for _ in enriched_path.open(encoding="utf-8")) - 1
+        clean_rows = sum(1 for _ in clean_path.open(encoding="utf-8")) - 1
+        # Prefer enriched only when it covers the full clean set (not a stale partial).
+        if enriched_rows >= clean_rows and enriched_path.stat().st_mtime >= clean_path.stat().st_mtime:
+            books_path = enriched_path
+        elif enriched_rows < clean_rows:
+            print(
+                f"Using {clean_path} ({clean_rows} rows); "
+                f"{enriched_path} is a partial enrich ({enriched_rows} rows). "
+                "Run make enrich-google-books for a full enriched set."
+            )
+        else:
             print(
                 f"Using {clean_path} because it is newer than {enriched_path}. "
                 "Run make enrich-google-books to refresh enrichment."
             )
+    elif enriched_path.exists():
+        books_path = enriched_path
     recommendations_path = PROCESSED_DIR / "recommendations.csv"
 
     if not books_path.exists():

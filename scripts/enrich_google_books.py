@@ -46,6 +46,8 @@ class EnrichmentStats:
             "description": 0,
             "publication_year": 0,
             "tags": 0,
+            "average_rating": 0,
+            "rating_count": 0,
         }
     )
     isbns_added: int = 0
@@ -164,6 +166,32 @@ def is_missing_int(value: Any) -> bool:
 
 def is_missing_text(value: Any) -> bool:
     return nullable_text(value) is None
+
+
+def nullable_float(value: Any) -> float | None:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    if number < 0 or number > 5:
+        return None
+    return number
+
+
+def should_replace_ratings(
+    existing_average: Any,
+    existing_count: Any,
+    candidate_average: float,
+    candidate_count: int,
+) -> bool:
+    """Keep the rating pair with the higher rating_count (merge rule)."""
+    current_count = nullable_int(existing_count)
+    current_average = nullable_float(existing_average)
+    if current_count is None or current_average is None or current_count <= 0:
+        return True
+    return candidate_count > current_count
 
 
 def https_cover_url(volume_info: dict[str, Any]) -> str | None:
@@ -357,6 +385,24 @@ def enrich_row(
         enriched["tags"] = tags_to_string(merged_tags)
         stats.fields_improved["tags"] += 1
 
+    google_average = nullable_float(volume_info.get("averageRating"))
+    google_count = nullable_int(volume_info.get("ratingsCount"))
+    if (
+        google_average is not None
+        and google_count is not None
+        and google_count > 0
+        and should_replace_ratings(
+            enriched.get("average_rating"),
+            enriched.get("rating_count"),
+            google_average,
+            google_count,
+        )
+    ):
+        enriched["average_rating"] = round(google_average, 2)
+        enriched["rating_count"] = google_count
+        stats.fields_improved["average_rating"] += 1
+        stats.fields_improved["rating_count"] += 1
+
     isbn_records = parse_isbns_column(enriched.get("isbns"))
     known_isbns = {normalize_isbn(record.get("isbn") or "") for record in isbn_records}
     for record in volume_isbns(volume_info):
@@ -417,6 +463,8 @@ def write_report(stats: EnrichmentStats, out_path: Path, *, input_path: Path, ou
         f"- description: {stats.fields_improved['description']}",
         f"- publication_year: {stats.fields_improved['publication_year']}",
         f"- tags: {stats.fields_improved['tags']}",
+        f"- average_rating: {stats.fields_improved['average_rating']}",
+        f"- rating_count: {stats.fields_improved['rating_count']}",
         f"- isbns added: {stats.isbns_added}",
         "",
     ]

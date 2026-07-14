@@ -1,15 +1,18 @@
 import Link from "next/link";
 
-import { linkClassName } from "@/lib/ui";
-
+import { BookTags } from "@/components/book-tags";
+import { LogBookControls } from "@/components/log-book-controls";
+import { ThemeProfile } from "@/components/theme-profile";
+import { CARD_TAGS_MAX, truncateTags } from "@/lib/display-tags";
 import {
-  formatPageCount,
+  formatPageLength,
   formatRating,
   formatRatingCount,
   formatScore,
   formatYear,
 } from "@/lib/format";
 import type { Book, BookRecommendation, RecommendationWithBook } from "@/lib/types";
+import { linkClassName } from "@/lib/ui";
 
 function BookCover({ book, size = "md" }: { book: Book; size?: "sm" | "md" | "lg" }) {
   const sizeClasses = {
@@ -177,16 +180,7 @@ function BookDetailContent({
             {book.title}
           </h2>
           <p className="mt-1 text-sm text-slate-600">{book.author}</p>
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {book.tags.map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
+          <BookTags tags={book.tags} mode={mode} />
         </div>
       </div>
 
@@ -194,7 +188,7 @@ function BookDetailContent({
 
       <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <MetadataItem label="Year" value={formatYear(book.publicationYear, book.decade)} />
-        <MetadataItem label="Length" value={formatPageCount(book.pageCount)} />
+        <MetadataItem label="Length" value={formatPageLength(book.pageCount)} />
         <MetadataItem label="Rating" value={formatRating(book.averageRating)} />
         <MetadataItem label="Popularity" value={formatRatingCount(book.ratingCount)} />
       </dl>
@@ -205,6 +199,10 @@ function BookDetailContent({
           <MetadataItem label="Source ID" value={book.sourceId} />
         </dl>
       ) : null}
+
+      <LogBookControls book={book} />
+
+      <ThemeProfile book={book} maxRows={mode === "preview" ? 5 : undefined} />
 
       <div className="mt-6">
         <SimilarBooksSection
@@ -224,6 +222,31 @@ function BookDetailContent({
         </div>
       ) : null}
     </>
+  );
+}
+
+function CardTags({ tags }: { tags: string[] }) {
+  const { visible, overflow } = truncateTags(tags, CARD_TAGS_MAX);
+  if (visible.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-1">
+      {visible.map((tag) => (
+        <span
+          key={tag}
+          className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600"
+        >
+          {tag}
+        </span>
+      ))}
+      {overflow > 0 ? (
+        <span className="rounded-full bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-500 ring-1 ring-slate-200">
+          +{overflow} more
+        </span>
+      ) : null}
+    </div>
   );
 }
 
@@ -250,22 +273,13 @@ function BookListCard({
           <div className="min-w-0 flex-1">
             <h3 className="truncate text-sm font-semibold text-slate-900">{book.title}</h3>
             <p className="text-xs text-slate-600">{book.author}</p>
-            <div className="mt-2 flex flex-wrap gap-1">
-              {book.tags.slice(0, 3).map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
+            <CardTags tags={book.tags} />
             <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-slate-500">
               {book.description}
             </p>
             <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-slate-500">
               <span>{formatYear(book.publicationYear, book.decade)}</span>
-              <span>{formatPageCount(book.pageCount)}</span>
+              <span>{formatPageLength(book.pageCount)}</span>
               <span>
                 {formatRating(book.averageRating)} · {formatRatingCount(book.ratingCount)}
               </span>
@@ -273,11 +287,9 @@ function BookListCard({
           </div>
         </button>
       </div>
-      <div className="mt-3 flex justify-end">
-        <Link
-          href={`/books/${book.id}`}
-          className={linkClassName}
-        >
+      <div className="mt-3 flex flex-wrap items-center justify-end gap-3">
+        <LogBookControls book={book} compact />
+        <Link href={`/books/${book.id}`} className={linkClassName}>
           Open detail page
         </Link>
       </div>

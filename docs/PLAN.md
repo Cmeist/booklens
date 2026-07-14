@@ -32,6 +32,7 @@ Supabase is now in scope. These remain out of scope unless a later plan explicit
 - Supabase Auth
 - Supabase Storage
 - User accounts, saved lists, comments, reviews, or social features
+  - Exception: local-only `/profile` reading log + preferences in the browser (no auth, no server writes)
 - Client-side writes to production tables
 - Exposing service-role keys, database URLs, or other server-only secrets to browser code
 

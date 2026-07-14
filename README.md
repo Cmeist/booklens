@@ -92,6 +92,8 @@ From the repo root:
 | `make pipeline-demo` | Run the demo data pipeline |
 | `make collect-openlibrary` | Collect real Open Library books (`BOOKLENS_CONTACT_EMAIL` or `CONTACT=...` required) |
 | `make pipeline-openlibrary` | Process `data/raw/openlibrary_books.csv` into processed CSVs |
+| `make enrich-openlibrary-ratings` | Fill `average_rating` / `rating_count` from Open Library work ratings |
+| `make enrich-google-books` | Enrich metadata (and secondary ratings) via Google Books API |
 | `make seed-supabase` | Upsert sample JSON into Supabase (`SUPABASE_DB_URL` required) |
 | `make web-dev` | Start the Next.js dev server |
 | `make web-build` | Production build of the web app |
@@ -116,6 +118,8 @@ Optional live Open Library collection (network required; not needed for the demo
 ```bash
 make collect-openlibrary
 make pipeline-openlibrary
+make enrich-openlibrary-ratings
+make enrich-google-books
 make seed-supabase SOURCE=csv
 ```
 

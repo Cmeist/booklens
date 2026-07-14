@@ -117,6 +117,8 @@ It can be added later as a secondary feature for books with strong average ratin
 
 User accounts, saved lists, collaborative filtering, AI summaries, and social features should also wait until the main product works.
 
+**Local-first personalization (shipped):** `/profile` stores a reading log and preferences in the browser (`localStorage`). Compatibility scoring uses that local profile — no Supabase Auth required. Cloud sync remains a later option.
+
 ## 6. Technical Stack
 
 ### Frontend

@@ -15,6 +15,31 @@ export function formatPageCount(pageCount: number | null): string {
   return `${pageCount.toLocaleString()} pages`;
 }
 
+export type PageLengthBand = "short" | "medium" | "long";
+
+export function pageLengthBand(pageCount: number | null): PageLengthBand | null {
+  if (pageCount === null) {
+    return null;
+  }
+  if (pageCount < 250) {
+    return "short";
+  }
+  if (pageCount <= 450) {
+    return "medium";
+  }
+  return "long";
+}
+
+export function formatPageLength(pageCount: number | null): string {
+  if (pageCount === null) {
+    return "Unknown length";
+  }
+  const band = pageLengthBand(pageCount);
+  const label =
+    band === "short" ? "Short" : band === "medium" ? "Medium" : "Long";
+  return `${label} · ${pageCount.toLocaleString()} pages`;
+}
+
 export function formatRating(averageRating: number | null): string {
   if (averageRating === null) {
     return "No rating";

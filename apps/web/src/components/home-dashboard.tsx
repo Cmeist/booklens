@@ -35,6 +35,11 @@ const entryPoints = [
     description: "Search and filter the catalog with tags, decades, and ratings.",
   },
   {
+    href: "/profile",
+    title: "Profile",
+    description: "Log books, rate them, and build a local taste profile.",
+  },
+  {
     href: "/compatibility",
     title: "Compatibility",
     description: "Compare books against your reading profile.",
@@ -81,7 +86,7 @@ export function HomeDashboard({ data, loadWarning }: HomeDashboardProps) {
           </div>
         </div>
 
-        <section aria-label="Entry points" className="mt-8 grid gap-4 sm:grid-cols-3">
+        <section aria-label="Entry points" className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {entryPoints.map((item) => (
             <Link
               key={item.href}
