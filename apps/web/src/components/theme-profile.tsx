@@ -17,9 +17,9 @@ export function ThemeProfile({ book, maxRows }: ThemeProfileProps) {
 
   return (
     <div className="mt-6">
-      <h3 className="text-sm font-semibold text-slate-900">Theme Profile</h3>
+      <h3 className="text-lg font-semibold text-ink">Theme profile</h3>
       {!hasSignal ? (
-        <p className="mt-2 text-sm text-slate-500">
+        <p className="mt-2 text-sm text-ink-faint">
           Not enough signal for a theme profile.
         </p>
       ) : (
@@ -36,11 +36,15 @@ export function ThemeProfile({ book, maxRows }: ThemeProfileProps) {
 function ThemeScoreRow({ item }: { item: ThemeScore }) {
   return (
     <li className="grid grid-cols-[minmax(0,7.5rem)_minmax(0,1fr)_2.5rem] items-center gap-2 sm:grid-cols-[minmax(0,9.5rem)_minmax(0,1fr)_2.75rem]">
-      <span className="truncate text-xs font-medium text-slate-600" title={item.label}>
+      <span className="truncate text-xs font-medium text-ink-soft" title={item.label}>
         {item.label}
       </span>
       <div
-        className="h-2 overflow-hidden rounded-full bg-slate-100 ring-1 ring-slate-200/80"
+        className="h-2.5 overflow-hidden rounded-full"
+        style={{
+          backgroundColor: "var(--paper-deep, #e9dfcf)",
+          boxShadow: "inset 0 0 0 1px var(--rule-strong, #b9aa94)",
+        }}
         role="meter"
         aria-label={`${item.label} ${item.score}%`}
         aria-valuemin={0}
@@ -48,11 +52,15 @@ function ThemeScoreRow({ item }: { item: ThemeScore }) {
         aria-valuenow={item.score}
       >
         <div
-          className="h-full rounded-full bg-teal-600 transition-[width]"
-          style={{ width: `${item.score}%` }}
+          className="h-full rounded-full transition-[width]"
+          style={{
+            width: `${item.score}%`,
+            minWidth: item.score > 0 ? "0.35rem" : undefined,
+            backgroundColor: "var(--forest, #234b3b)",
+          }}
         />
       </div>
-      <span className="text-right text-xs font-medium tabular-nums text-slate-500">
+      <span className="text-right text-xs font-medium tabular-nums text-ink-faint">
         {item.score}%
       </span>
     </li>

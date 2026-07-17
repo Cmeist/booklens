@@ -6,8 +6,7 @@
     "description": "A science fiction epic about politics, ecology, religion, and power on the desert planet Arrakis.",
     "tags": [
       "science fiction",
-      "classics",
-      "politics"
+      "classics"
     ],
     "publicationYear": 1965,
     "decade": "1960s",
@@ -24,9 +23,9 @@
     "author": "Jane Austen",
     "description": "A classic romance and social comedy about manners, family, class, and misunderstanding.",
     "tags": [
-      "classics",
       "romance",
-      "literary fiction"
+      "literary fiction",
+      "classics"
     ],
     "publicationYear": 1813,
     "decade": "1810s",

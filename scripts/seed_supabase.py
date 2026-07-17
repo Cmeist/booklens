@@ -25,6 +25,13 @@ import pandas as pd
 import psycopg
 from dotenv import load_dotenv
 
+try:
+    from scripts.run_pipeline import build_recommendations
+    from scripts.tag_normalization import normalize_tags
+except ModuleNotFoundError:  # Direct execution: python scripts/seed_supabase.py
+    from run_pipeline import build_recommendations
+    from tag_normalization import normalize_tags
+
 ROOT = Path(__file__).resolve().parents[1]
 WEB_DATA_DIR = ROOT / "apps" / "web" / "src" / "data"
 PROCESSED_DIR = ROOT / "data" / "processed"
@@ -119,9 +126,10 @@ insert into public.book_sources (
   now()
 )
 on conflict (provider, provider_id) do update set
-  book_id = excluded.book_id,
   provider_url = excluded.provider_url,
+  raw_payload = coalesce(excluded.raw_payload, book_sources.raw_payload),
   fetched_at = excluded.fetched_at
+where book_sources.book_id = excluded.book_id
 """
 
 BOOK_ISBN_UPSERT = """
@@ -231,11 +239,55 @@ def nullable_float(value: Any) -> float | None:
 
 
 def parse_tags(value: Any) -> list[str]:
-    if value is None or (isinstance(value, float) and pd.isna(value)):
+    return normalize_tags(value).tags
+
+
+def recommendations_for_books(books: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Build recommendations from the exact normalized records being seeded."""
+    if not books:
         return []
-    if isinstance(value, list):
-        return [str(tag).strip() for tag in value if str(tag).strip()]
-    return [tag.strip() for tag in str(value).split(";") if tag.strip()]
+    rows = []
+    for book in books:
+        rows.append(
+            {
+                "id": book["id"],
+                "title": book["title"],
+                "author": book["author"],
+                "description": book.get("description") or "",
+                "tag_list": parse_tags(book.get("tags")),
+                "decade": book.get("decade"),
+                "page_count": book.get("page_count"),
+                "rating_count": book.get("rating_count"),
+                "average_rating": book.get("average_rating"),
+            }
+        )
+
+    recommendation_input = pd.DataFrame(rows)
+    # Keep database nulls as None. Pandas otherwise promotes optional numeric
+    # columns to NaN, which the recommendation helpers correctly do not treat
+    # as a real page/rating value.
+    for column in ("page_count", "rating_count", "average_rating"):
+        recommendation_input[column] = recommendation_input[column].astype(object).where(
+            recommendation_input[column].notna(),
+            None,
+        )
+    recommendation_df = build_recommendations(recommendation_input)
+    recommendations: list[dict[str, Any]] = []
+    for record in recommendation_df.to_dict(orient="records"):
+        reasons = [
+            part.strip()
+            for part in str(record.get("reasons", "")).split(";")
+            if part.strip()
+        ]
+        recommendations.append(
+            {
+                "book_id": record["book_id"],
+                "similar_book_id": record["similar_book_id"],
+                "score": float(record["score"]),
+                "reasons": reasons,
+            }
+        )
+    return recommendations
 
 
 def normalize_isbn(value: str) -> str:
@@ -326,6 +378,12 @@ def provider_url_for(provider: str | None, provider_id: str | None) -> str | Non
         return f"https://openlibrary.org/works/{provider_id}"
     if provider == "googlebooks":
         return f"https://books.google.com/books?id={provider_id}"
+    if provider == "loc":
+        value = provider_id.strip()
+        if value.startswith("http://www.loc.gov/item/"):
+            return f"https://{value.removeprefix('http://')}"
+        if value.startswith("https://www.loc.gov/item/"):
+            return value
     return None
 
 
@@ -384,22 +442,10 @@ def book_row_from_csv(record: dict[str, Any]) -> dict[str, Any]:
 
 def load_json_source() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     books_path = WEB_DATA_DIR / "books.sample.json"
-    recommendations_path = WEB_DATA_DIR / "recommendations.sample.json"
 
     books_raw = json.loads(books_path.read_text(encoding="utf-8"))
-    recommendations_raw = json.loads(recommendations_path.read_text(encoding="utf-8"))
-
     books = [book_row_from_json(record) for record in books_raw]
-    recommendations = [
-        {
-            "book_id": record["bookId"],
-            "similar_book_id": record["similarBookId"],
-            "score": float(record["score"]),
-            "reasons": list(record["reasons"]),
-        }
-        for record in recommendations_raw
-    ]
-    return books, recommendations
+    return books, recommendations_for_books(books)
 
 
 def load_csv_source() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -425,8 +471,6 @@ def load_csv_source() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
             )
     elif enriched_path.exists():
         books_path = enriched_path
-    recommendations_path = PROCESSED_DIR / "recommendations.csv"
-
     if not books_path.exists():
         raise FileNotFoundError(
             f"Processed books file not found: {books_path}. "
@@ -435,26 +479,7 @@ def load_csv_source() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
 
     books_df = pd.read_csv(books_path)
     books = [book_row_from_csv(record) for record in books_df.to_dict(orient="records")]
-
-    recommendations: list[dict[str, Any]] = []
-    if recommendations_path.exists():
-        recommendations_df = pd.read_csv(recommendations_path)
-        for record in recommendations_df.to_dict(orient="records"):
-            reasons = [
-                part.strip()
-                for part in str(record.get("reasons", "")).split(";")
-                if part.strip()
-            ]
-            recommendations.append(
-                {
-                    "book_id": record["book_id"],
-                    "similar_book_id": record["similar_book_id"],
-                    "score": float(record["score"]),
-                    "reasons": reasons,
-                }
-            )
-
-    return books, recommendations
+    return books, recommendations_for_books(books)
 
 
 def start_ingestion_run(
@@ -510,6 +535,9 @@ def seed_supabase(
     *,
     mode: str,
 ) -> None:
+    for book in books:
+        book["tags"] = parse_tags(book.get("tags"))
+
     database_url = get_database_url()
     seeded_book_ids = [book["id"] for book in books if book.get("id")]
     run_id = uuid.uuid4()
@@ -605,7 +633,13 @@ def seed_supabase(
                     cur.executemany(TAG_INSERT, tag_rows)
 
                 if source_rows:
-                    cur.executemany(BOOK_SOURCE_UPSERT, source_rows)
+                    for source_row in source_rows:
+                        cur.execute(BOOK_SOURCE_UPSERT, source_row)
+                        if cur.rowcount != 1:
+                            raise RuntimeError(
+                                "Provider record is already assigned to another book: "
+                                f"{source_row['provider']}:{source_row['provider_id']}"
+                            )
                     source_count = len(source_rows)
 
                 if isbn_rows:

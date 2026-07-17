@@ -14,6 +14,15 @@ import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+try:
+    from scripts.tag_normalization import (
+        CANONICAL_TAG_SET,
+        MAX_TAGS_PER_BOOK,
+        normalize_tags,
+    )
+except ModuleNotFoundError:  # Direct execution: python scripts/run_pipeline.py
+    from tag_normalization import CANONICAL_TAG_SET, MAX_TAGS_PER_BOOK, normalize_tags
+
 
 ROOT = Path(__file__).resolve().parents[1]
 RAW_DIR = ROOT / "data" / "raw"
@@ -122,19 +131,7 @@ def clean_text(value: Any) -> str | None:
 
 
 def parse_tags(value: Any) -> list[str]:
-    if value is None or (isinstance(value, float) and pd.isna(value)):
-        return []
-
-    tags: list[str] = []
-    seen: set[str] = set()
-    for raw in re.split(r"[;|]", str(value)):
-        tag = raw.strip().lower()
-        tag = re.sub(r"[_-]+", " ", tag)
-        tag = re.sub(r"\s+", " ", tag).strip()
-        if tag and tag != "nan" and tag not in seen:
-            tags.append(tag)
-            seen.add(tag)
-    return tags
+    return normalize_tags(value).tags
 
 
 def tags_to_string(tags: list[str]) -> str:
@@ -221,7 +218,11 @@ def normalize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         if not title or not author:
             continue
 
-        tags = parse_tags(row.get("tags"))
+        tag_result = normalize_tags(row.get("tags"))
+        tags = tag_result.tags
+        unknown_tags = set(tags) - CANONICAL_TAG_SET
+        if unknown_tags:
+            raise RuntimeError(f"Normalizer emitted unknown tags: {sorted(unknown_tags)}")
         publication_year = to_int(row.get("publication_year"))
         page_count = to_int(row.get("page_count"))
         rating_count = to_int(row.get("rating_count"))
@@ -254,6 +255,12 @@ def normalize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                 "description": clean_text(row.get("description")) or "",
                 "tags": tags_to_string(tags),
                 "tag_list": tags,
+                "tag_source_labels": tag_result.source_labels,
+                "tag_mapped": tag_result.mapped,
+                "tag_dropped": tag_result.dropped,
+                "tag_unmapped": tag_result.unmapped,
+                "tag_suppressed": tag_result.suppressed,
+                "tag_capped": tag_result.capped,
                 "publication_year": publication_year,
                 "decade": to_decade(publication_year),
                 "page_count": page_count,
@@ -518,6 +525,73 @@ def missing_ratings_count(df: pd.DataFrame) -> int:
     return int((missing_rating_count | missing_average_rating).sum())
 
 
+def tag_percentile(df: pd.DataFrame, percentile: int) -> float:
+    counts = [len(tags) for tags in df["tag_list"]]
+    if not counts:
+        return 0.0
+    return round(float(np.percentile(counts, percentile)), 1)
+
+
+def build_tag_audit(df: pd.DataFrame) -> dict[str, Any]:
+    source_counter: Counter[str] = Counter()
+    canonical_counter: Counter[str] = Counter()
+    unmapped_counter: Counter[str] = Counter()
+    dropped_reason_counter: Counter[str] = Counter()
+    alias_counter: Counter[tuple[str, str]] = Counter()
+    suppressed_counter: Counter[str] = Counter()
+    capped_counter: Counter[str] = Counter()
+
+    for row in df.to_dict(orient="records"):
+        source_counter.update(row["tag_source_labels"])
+        canonical_counter.update(row["tag_list"])
+        unmapped_counter.update(row["tag_unmapped"])
+        dropped_reason_counter.update(row["tag_dropped"].values())
+        suppressed_counter.update(row["tag_suppressed"])
+        capped_counter.update(row["tag_capped"])
+        for source, outputs in row["tag_mapped"].items():
+            for output in outputs:
+                if source != output:
+                    alias_counter[(source, output)] += 1
+
+    zero_tag_books = [
+        row["title"] for row in df.to_dict(orient="records") if not row["tag_list"]
+    ]
+    return {
+        "source_counter": source_counter,
+        "canonical_counter": canonical_counter,
+        "unmapped_counter": unmapped_counter,
+        "dropped_reason_counter": dropped_reason_counter,
+        "alias_counter": alias_counter,
+        "suppressed_counter": suppressed_counter,
+        "capped_counter": capped_counter,
+        "zero_tag_books": zero_tag_books,
+    }
+
+
+def write_unmapped_tags(df: pd.DataFrame, out_path: Path) -> None:
+    counter: Counter[str] = Counter()
+    samples: dict[str, list[str]] = {}
+    for row in df.to_dict(orient="records"):
+        for tag in row["tag_unmapped"]:
+            counter[tag] += 1
+            titles = samples.setdefault(tag, [])
+            if len(titles) < 3 and row["title"] not in titles:
+                titles.append(row["title"])
+
+    rows = [
+        {
+            "tag": tag,
+            "occurrence_count": count,
+            "sample_books": " | ".join(samples[tag]),
+        }
+        for tag, count in counter.most_common()
+    ]
+    pd.DataFrame(rows, columns=["tag", "occurrence_count", "sample_books"]).to_csv(
+        out_path,
+        index=False,
+    )
+
+
 def write_quality_report(
     df: pd.DataFrame,
     top_tags: pd.DataFrame,
@@ -526,6 +600,9 @@ def write_quality_report(
     *,
     input_mode: str,
 ) -> None:
+    tag_audit = build_tag_audit(df)
+    before_assignments = sum(tag_audit["source_counter"].values())
+    after_assignments = sum(tag_audit["canonical_counter"].values())
     lines = [
         "BookLens Data Quality Report",
         "============================",
@@ -539,8 +616,58 @@ def write_quality_report(
         f"- ratings (rating_count or average_rating): {missing_ratings_count(df)}",
         f"- publication_year: {int(df['publication_year'].isna().sum())}",
         "",
-        "Top tags:",
+        "Canonical tag cleanup:",
+        f"- assignments before: {before_assignments}",
+        f"- assignments after: {after_assignments}",
+        f"- unique source labels: {len(tag_audit['source_counter'])}",
+        f"- unique canonical labels: {len(tag_audit['canonical_counter'])}",
+        f"- maximum tags per book: {max((len(tags) for tags in df['tag_list']), default=0)}",
+        f"- median tags per book: {tag_percentile(df, 50):g}",
+        f"- p95 tags per book: {tag_percentile(df, 95):g}",
+        f"- zero-tag books: {len(tag_audit['zero_tag_books'])}",
+        f"- unmapped assignments: {sum(tag_audit['unmapped_counter'].values())}",
+        f"- suppressed redundant tags: {sum(tag_audit['suppressed_counter'].values())}",
+        f"- mapped tags removed by {MAX_TAGS_PER_BOOK}-tag cap: {sum(tag_audit['capped_counter'].values())}",
+        "",
+        "Dropped tag assignments by reason:",
     ]
+
+    if tag_audit["dropped_reason_counter"]:
+        for reason, count in tag_audit["dropped_reason_counter"].most_common():
+            lines.append(f"- {reason}: {count}")
+    else:
+        lines.append("- none")
+
+    lines.extend(
+        [
+            "",
+            "Top alias rollups:",
+        ]
+    )
+    if tag_audit["alias_counter"]:
+        for (source, output), count in tag_audit["alias_counter"].most_common(10):
+            lines.append(f"- {source} -> {output}: {count}")
+    else:
+        lines.append("- none")
+
+    lines.extend(
+        [
+            "",
+            "Top unmapped tags:",
+        ]
+    )
+    if tag_audit["unmapped_counter"]:
+        for tag, count in tag_audit["unmapped_counter"].most_common(10):
+            lines.append(f"- {tag}: {count}")
+    else:
+        lines.append("- none")
+
+    lines.extend(
+        [
+            "",
+            "Top tags:",
+        ]
+    )
 
     if top_tags.empty:
         lines.append("- none")
@@ -611,6 +738,10 @@ def run_pipeline(use_openlibrary: bool, input_path: Path | None) -> None:
     report_path = PROCESSED_DIR / "data_quality_report.txt"
     write_quality_report(books, top_tags, recommendations, report_path, input_mode=input_mode)
     print(f"Wrote {report_path}")
+
+    unmapped_path = PROCESSED_DIR / "unmapped_tags.csv"
+    write_unmapped_tags(books, unmapped_path)
+    print(f"Wrote {unmapped_path}")
 
     books_json_path = WEB_DATA_DIR / "books.sample.json"
     top_tags_json_path = WEB_DATA_DIR / "top-tags.sample.json"

@@ -13,10 +13,12 @@ Examples:
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import os
 import re
 import time
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -25,6 +27,11 @@ from urllib.parse import quote
 import pandas as pd
 import requests
 from dotenv import load_dotenv
+
+try:
+    from scripts.tag_normalization import normalize_tags, split_source_tags, tags_to_string
+except ModuleNotFoundError:  # Direct execution: python scripts/enrich_google_books.py
+    from tag_normalization import normalize_tags, split_source_tags, tags_to_string
 
 ROOT = Path(__file__).resolve().parents[1]
 PROCESSED_DIR = ROOT / "data" / "processed"
@@ -53,6 +60,8 @@ class EnrichmentStats:
     isbns_added: int = 0
     weak_matches: list[str] = field(default_factory=list)
     unmatched_titles: list[str] = field(default_factory=list)
+    unmapped_tags: Counter[str] = field(default_factory=Counter)
+    unmapped_tag_samples: dict[str, list[str]] = field(default_factory=dict)
 
 
 def get_api_key() -> str:
@@ -102,22 +111,7 @@ def first_author(author: str | None) -> str:
 
 
 def parse_tags(value: Any) -> list[str]:
-    if value is None or (isinstance(value, float) and pd.isna(value)):
-        return []
-    tags: list[str] = []
-    seen: set[str] = set()
-    for raw in re.split(r"[;|]", str(value)):
-        tag = raw.strip().lower()
-        tag = re.sub(r"[_-]+", " ", tag)
-        tag = re.sub(r"\s+", " ", tag).strip()
-        if tag and tag not in seen:
-            tags.append(tag)
-            seen.add(tag)
-    return tags
-
-
-def tags_to_string(tags: list[str]) -> str:
-    return "; ".join(tags)
+    return split_source_tags(value)
 
 
 def parse_isbns_column(value: Any) -> list[dict[str, str | None]]:
@@ -379,11 +373,20 @@ def enrich_row(
             enriched["decade"] = to_decade(year)
             stats.fields_improved["publication_year"] += 1
 
+    previous_tags = tags_to_string(normalize_tags(enriched.get("tags")).tags)
     existing_tags = parse_tags(enriched.get("tags"))
     merged_tags = merge_tags(existing_tags, volume_info.get("categories"))
-    if len(merged_tags) > len(existing_tags):
-        enriched["tags"] = tags_to_string(merged_tags)
+    tag_result = normalize_tags(merged_tags)
+    normalized_tags = tags_to_string(tag_result.tags)
+    enriched["tags"] = normalized_tags
+    if normalized_tags != previous_tags:
         stats.fields_improved["tags"] += 1
+    title = nullable_text(enriched.get("title")) or "unknown title"
+    for tag in tag_result.unmapped:
+        stats.unmapped_tags[tag] += 1
+        samples = stats.unmapped_tag_samples.setdefault(tag, [])
+        if len(samples) < 3 and title not in samples:
+            samples.append(title)
 
     google_average = nullable_float(volume_info.get("averageRating"))
     google_count = nullable_int(volume_info.get("ratingsCount"))
@@ -466,6 +469,7 @@ def write_report(stats: EnrichmentStats, out_path: Path, *, input_path: Path, ou
         f"- average_rating: {stats.fields_improved['average_rating']}",
         f"- rating_count: {stats.fields_improved['rating_count']}",
         f"- isbns added: {stats.isbns_added}",
+        f"- unmapped tag assignments: {sum(stats.unmapped_tags.values())}",
         "",
     ]
 
@@ -483,6 +487,24 @@ def write_report(stats: EnrichmentStats, out_path: Path, *, input_path: Path, ou
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def write_unmapped_tags_report(stats: EnrichmentStats, out_path: Path) -> None:
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with out_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=["tag", "occurrence_count", "sample_books"],
+        )
+        writer.writeheader()
+        for tag, count in stats.unmapped_tags.most_common():
+            writer.writerow(
+                {
+                    "tag": tag,
+                    "occurrence_count": count,
+                    "sample_books": " | ".join(stats.unmapped_tag_samples.get(tag, [])),
+                }
+            )
 
 
 def enrich_books(
@@ -542,10 +564,17 @@ def enrich_books(
                 row["extra_sources"] = "[]"
             enriched_rows.append(row)
 
+    for row in enriched_rows:
+        row["tags"] = tags_to_string(normalize_tags(row.get("tags")).tags)
+
     output_df = pd.DataFrame(enriched_rows)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_df.to_csv(output_path, index=False)
     write_report(stats, report_path, input_path=input_path, output_path=output_path)
+    write_unmapped_tags_report(
+        stats,
+        report_path.with_name("google_books_unmapped_tags.csv"),
+    )
     return stats
 
 

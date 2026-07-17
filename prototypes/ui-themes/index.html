@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>BookLens Theme Lab</title>
+    <link rel="stylesheet" href="./comparison.css" />
+    <script src="./comparison.js" defer></script>
+  </head>
+  <body>
+    <header class="lab-header">
+      <div>
+        <p class="eyebrow">BookLens · Theme selection gate</p>
+        <h1>Compare the visual directions</h1>
+        <p class="lede">
+          Every preview uses the same books and product states. Compare hierarchy, tone, and
+          responsiveness before changing the real application.
+        </p>
+      </div>
+      <a class="decision-link" href="./DECISION.md">Open decision scorecard ↗</a>
+    </header>
+
+    <main>
+      <section class="lab-controls" aria-label="Preview controls">
+        <label>
+          <span>Screen</span>
+          <select id="screen-control">
+            <option value="home">Home / discovery</option>
+            <option value="explore">Explore results</option>
+            <option value="detail">Book detail</option>
+          </select>
+        </label>
+
+        <fieldset>
+          <legend>Viewport</legend>
+          <div class="segment">
+            <label><input type="radio" name="viewport" value="mobile" /> 390px</label>
+            <label><input type="radio" name="viewport" value="desktop" checked /> 1440px</label>
+          </div>
+        </fieldset>
+
+        <label class="toggle-label">
+          <input id="art-control" type="checkbox" checked />
+          <span>Show artwork / chrome</span>
+        </label>
+      </section>
+
+      <section class="theme-grid" aria-label="Theme previews">
+        <article class="theme-card" data-theme="curated-reading-room">
+          <header>
+            <div>
+              <p>Direction 01</p>
+              <h2>The Curated Reading Room</h2>
+            </div>
+            <a class="full-link" target="_blank" rel="noreferrer">Open full size ↗</a>
+          </header>
+          <div class="preview-window">
+            <iframe title="Curated Reading Room preview" loading="eager"></iframe>
+          </div>
+          <p class="rationale">Warm editorial calm with walnut accents and restrained bookplate chrome.</p>
+        </article>
+
+        <article class="theme-card" data-theme="modern-book-journal">
+          <header>
+            <div>
+              <p>Direction 02</p>
+              <h2>The Modern Book Journal</h2>
+            </div>
+            <a class="full-link" target="_blank" rel="noreferrer">Open full size ↗</a>
+          </header>
+          <div class="preview-window">
+            <iframe title="Modern Book Journal preview" loading="eager"></iframe>
+          </div>
+          <p class="rationale">Bold culture-magazine energy with cover-first discovery.</p>
+        </article>
+
+        <article class="theme-card" data-theme="intelligent-archive">
+          <header>
+            <div>
+              <p>Direction 03</p>
+              <h2>The Intelligent Archive</h2>
+            </div>
+            <a class="full-link" target="_blank" rel="noreferrer">Open full size ↗</a>
+          </header>
+          <div class="preview-window">
+            <iframe title="Intelligent Archive preview" loading="eager"></iframe>
+          </div>
+          <p class="rationale">Precise, information-rich, and analytically distinctive.</p>
+        </article>
+      </section>
+
+      <section class="review-notes">
+        <p class="eyebrow">Review prompt</p>
+        <h2>Look for the system, not just the hero.</h2>
+        <p>
+          Check long titles, missing covers, selected states, rating versus personal match, and the
+          no-art version. The winning theme must work for dense tools as well as discovery moments.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

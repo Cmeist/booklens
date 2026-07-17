@@ -17,8 +17,8 @@ export default async function CompatibilityPage() {
   return (
     <Suspense
       fallback={
-        <div className={`${pageShellClassName} px-4 py-8 text-sm text-slate-500`}>
-          Loading compatibility…
+        <div className={`${pageShellClassName} px-4 py-8 text-sm text-ink-faint`}>
+          Preparing your matches…
         </div>
       }
     >

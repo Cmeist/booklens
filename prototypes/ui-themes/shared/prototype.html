@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>BookLens Theme Prototype</title>
+    <link rel="stylesheet" href="./base.css" />
+    <link id="theme-stylesheet" rel="stylesheet" />
+    <script src="./prototype.js" defer></script>
+  </head>
+  <body>
+    <div id="prototype-toolbar" class="prototype-toolbar">
+      <a href="../">← Theme Lab</a>
+      <label>
+        <span>Theme</span>
+        <select id="theme-select">
+          <option value="curated-reading-room">Curated Reading Room</option>
+          <option value="modern-book-journal">Modern Book Journal</option>
+          <option value="intelligent-archive">Intelligent Archive</option>
+        </select>
+      </label>
+      <nav aria-label="Prototype screens">
+        <a data-screen-link="home">Home</a>
+        <a data-screen-link="explore">Explore</a>
+        <a data-screen-link="detail">Book detail</a>
+      </nav>
+      <label class="art-toggle"><input id="art-toggle" type="checkbox" checked /> Decoration</label>
+    </div>
+    <div id="app"></div>
+  </body>
+</html>

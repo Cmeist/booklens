@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import { BookCover } from "@/components/book-cover";
 import {
   ConfirmBookActionDialog,
 } from "@/components/confirm-book-action-dialog";
@@ -48,7 +49,7 @@ type LogSort = "updated" | "rating" | "title";
 const LOG_PAGE_SIZE = 10;
 
 const pagerButtonClassName =
-  "rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white";
+  "rounded-full bg-paper-raised px-3 py-1.5 text-xs font-semibold text-ink-soft ring-1 ring-rule transition-colors hover:bg-paper-deep disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-paper-raised";
 
 export function ProfilePageClient({ data, loadWarning }: ProfilePageProps) {
   const { books, source } = data;
@@ -225,37 +226,37 @@ export function ProfilePageClient({ data, loadWarning }: ProfilePageProps) {
         </div>
       ) : null}
 
-      <div className={`${contentContainerClassName} max-w-5xl py-8`}>
+      <div className={`${contentContainerClassName} max-w-5xl py-8 sm:py-12`}>
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-700">
-              BookLens
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-walnut">
+              Your private reading record
             </p>
-            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-              Profile
+            <h1 className="mt-2 text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
+              My Library
             </h1>
-            <p className="mt-2 max-w-2xl text-sm text-slate-600">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-soft">
               Log books, rate what you finish, and build a local taste profile for compatibility
               scoring. Saved in this browser only.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <span className={dataBadgeClassName}>Data: {dataSourceLabel}</span>
-            <span className={`${dataBadgeClassName} bg-slate-100 text-slate-600 ring-0`}>
+            <span className={`${dataBadgeClassName} bg-walnut-soft text-walnut-deep ring-walnut/10`}>
               {profile.log.length} logged
             </span>
           </div>
         </header>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <section className="reading-room-card rounded-2xl p-5 sm:p-6">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <h2 className="text-sm font-semibold text-slate-900">Reading log</h2>
-                <p className="mt-0.5 text-xs text-slate-500">{rangeLabel}</p>
+                <h2 className="text-2xl font-semibold text-ink">Reading log</h2>
+                <p className="mt-0.5 text-xs text-ink-faint">{rangeLabel}</p>
               </div>
               {totalPages > 1 ? (
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-ink-faint">
                   Page {page} of {totalPages}
                 </p>
               ) : null}
@@ -269,8 +270,8 @@ export function ProfilePageClient({ data, loadWarning }: ProfilePageProps) {
                   onClick={() => setStatus(status)}
                   className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
                     statusFilter === status
-                      ? "bg-slate-900 text-white"
-                      : "bg-slate-50 text-slate-600 ring-1 ring-slate-200"
+                      ? "bg-forest text-white"
+                      : "bg-paper-deep text-ink-soft ring-1 ring-rule"
                   }`}
                 >
                   {status === "all" ? "All" : LOG_STATUS_LABELS[status]}
@@ -293,8 +294,8 @@ export function ProfilePageClient({ data, loadWarning }: ProfilePageProps) {
                   onClick={() => setRating(value)}
                   className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
                     ratingFilter === value
-                      ? "bg-teal-700 text-white"
-                      : "bg-slate-50 text-slate-600 ring-1 ring-slate-200"
+                      ? "bg-walnut text-white"
+                      : "bg-paper-deep text-ink-soft ring-1 ring-rule"
                   }`}
                 >
                   {label}
@@ -313,7 +314,7 @@ export function ProfilePageClient({ data, loadWarning }: ProfilePageProps) {
                     resetLogPage();
                   }}
                   placeholder="Filter log by title, author, or note"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none ring-teal-500 focus:ring-2"
+                  className="w-full rounded-xl border border-rule bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-forest focus:ring-2 focus:ring-forest/20"
                 />
               </label>
               <label className="block">
@@ -321,7 +322,7 @@ export function ProfilePageClient({ data, loadWarning }: ProfilePageProps) {
                 <select
                   value={logSort}
                   onChange={(event) => setSort(event.target.value as LogSort)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none ring-teal-500 focus:ring-2 sm:w-40"
+                  className="w-full rounded-xl border border-rule bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-forest focus:ring-2 focus:ring-forest/20 sm:w-40"
                 >
                   <option value="updated">Newest</option>
                   <option value="rating">Highest rated</option>
@@ -331,13 +332,13 @@ export function ProfilePageClient({ data, loadWarning }: ProfilePageProps) {
             </div>
 
             <label className="mt-4 block">
-              <span className="text-xs font-medium text-slate-500">Add from catalog</span>
+              <span className="text-xs font-semibold uppercase tracking-[0.12em] text-walnut">Add from catalog</span>
               <input
                 type="search"
                 value={catalogQuery}
                 onChange={(event) => setCatalogQuery(event.target.value)}
                 placeholder="Search title or author to log"
-                className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none ring-teal-500 focus:ring-2"
+                className="mt-1.5 w-full rounded-xl border border-rule bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-forest focus:ring-2 focus:ring-forest/20"
               />
             </label>
 
@@ -346,16 +347,17 @@ export function ProfilePageClient({ data, loadWarning }: ProfilePageProps) {
                 {searchHits.map((book) => (
                   <li
                     key={book.id}
-                    className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 ring-1 ring-slate-100"
+                    className="flex items-center justify-between gap-3 rounded-lg bg-paper-deep/55 px-3 py-2 ring-1 ring-rule"
                   >
-                    <div className="min-w-0">
+                    <BookCover book={book} size="sm" />
+                    <div className="min-w-0 flex-1">
                       <Link
                         href={`/books/${book.id}`}
                         className={`block truncate text-sm font-medium ${linkClassName}`}
                       >
                         {book.title}
                       </Link>
-                      <p className="truncate text-xs text-slate-500">{book.author}</p>
+                      <p className="truncate text-xs text-ink-faint">{book.author}</p>
                     </div>
                     <button
                       type="button"
@@ -368,7 +370,7 @@ export function ProfilePageClient({ data, loadWarning }: ProfilePageProps) {
                           },
                         })
                       }
-                      className="shrink-0 rounded-full bg-teal-700 px-3 py-1 text-xs font-medium text-white hover:bg-teal-800"
+                      className="shrink-0 rounded-full bg-forest px-3 py-1 text-xs font-semibold text-white hover:bg-forest-deep"
                     >
                       Log
                     </button>
@@ -379,12 +381,12 @@ export function ProfilePageClient({ data, loadWarning }: ProfilePageProps) {
 
             <div className="mt-5 space-y-3">
               {!hydrated ? (
-                <p className="text-sm text-slate-500">Loading saved profile…</p>
+                <p className="text-sm text-ink-faint">Loading saved profile…</p>
               ) : filteredLog.length === 0 ? (
-                <p className="rounded-lg border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500">
+                <p className="rounded-lg border border-dashed border-rule px-4 py-8 text-center text-sm text-ink-faint">
                   No books in this view yet. Adjust filters, search above, or log from{" "}
                   <Link href="/explore" className={linkClassName}>
-                    Explore
+                    Discover
                   </Link>
                   .
                 </p>
@@ -395,10 +397,13 @@ export function ProfilePageClient({ data, loadWarning }: ProfilePageProps) {
                     return (
                       <article
                         key={entry.bookId}
-                        className="rounded-xl border border-slate-200 bg-slate-50/60 p-4"
+                        className="rounded-xl border border-rule bg-paper-deep/35 p-4"
                       >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
+                        <div className="flex gap-3">
+                          {book ? <BookCover book={book} size="sm" /> : null}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
                             {book ? (
                               <Link
                                 href={`/books/${entry.bookId}`}
@@ -407,40 +412,42 @@ export function ProfilePageClient({ data, loadWarning }: ProfilePageProps) {
                                 {book.title}
                               </Link>
                             ) : (
-                              <h3 className="truncate text-sm font-semibold text-slate-900">
+                              <h3 className="truncate text-sm font-semibold text-ink">
                                 Unknown book
                               </h3>
                             )}
-                            <p className="text-xs text-slate-600">
+                            <p className="text-xs text-ink-soft">
                               {book?.author ?? entry.bookId}
                             </p>
+                              </div>
+                            </div>
+                            <LogBookControls
+                              book={{
+                                id: entry.bookId,
+                                title: book?.title ?? "Unknown book",
+                                author: book?.author ?? entry.bookId,
+                              }}
+                              compact
+                            />
+                            <label className="mt-2 block">
+                              <span className="sr-only">Note</span>
+                              <input
+                                type="text"
+                                value={entry.note}
+                                onChange={(event) =>
+                                  setProfile((current) =>
+                                    upsertLogEntry(current, {
+                                      bookId: entry.bookId,
+                                      note: event.target.value,
+                                    }),
+                                  )
+                                }
+                                placeholder="Optional note"
+                                className="w-full rounded-lg border border-rule bg-paper-raised px-3 py-1.5 text-xs text-ink outline-none focus:border-forest focus:ring-2 focus:ring-forest/20"
+                              />
+                            </label>
                           </div>
                         </div>
-                        <LogBookControls
-                          book={{
-                            id: entry.bookId,
-                            title: book?.title ?? "Unknown book",
-                            author: book?.author ?? entry.bookId,
-                          }}
-                          compact
-                        />
-                        <label className="mt-2 block">
-                          <span className="sr-only">Note</span>
-                          <input
-                            type="text"
-                            value={entry.note}
-                            onChange={(event) =>
-                              setProfile((current) =>
-                                upsertLogEntry(current, {
-                                  bookId: entry.bookId,
-                                  note: event.target.value,
-                                }),
-                              )
-                            }
-                            placeholder="Optional note"
-                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs outline-none ring-teal-500 focus:ring-2"
-                          />
-                        </label>
                       </article>
                     );
                   })}
@@ -458,7 +465,7 @@ export function ProfilePageClient({ data, loadWarning }: ProfilePageProps) {
                       >
                         Previous
                       </button>
-                      <p className="text-xs font-medium text-slate-600">
+                      <p className="text-xs font-medium text-ink-soft">
                         Page {page} of {totalPages}
                       </p>
                       <button
@@ -477,20 +484,21 @@ export function ProfilePageClient({ data, loadWarning }: ProfilePageProps) {
           </section>
 
           <div className="space-y-6">
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="text-sm font-semibold text-slate-900">Taste profile</h2>
-              <p className="mt-1 text-xs text-slate-500">
+            <section className="reading-room-card rounded-2xl p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-walnut">From your shelves</p>
+              <h2 className="mt-1 text-2xl font-semibold text-ink">Taste profile</h2>
+              <p className="mt-1 text-xs text-ink-faint">
                 Derived from your log{taste.ratedCount ? ` · avg ${taste.averagePersonalRating}★` : ""}
               </p>
 
               {taste.logCount === 0 ? (
-                <p className="mt-4 text-sm text-slate-500">
+                <p className="mt-4 text-sm text-ink-faint">
                   Log and rate books to see theme and tag signals here.
                 </p>
               ) : (
                 <>
                   <div className="mt-4">
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-walnut">
                       Top tags
                     </p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
@@ -498,18 +506,18 @@ export function ProfilePageClient({ data, loadWarning }: ProfilePageProps) {
                         taste.topTags.map((item) => (
                           <span
                             key={item.tag}
-                            className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700"
+                            className="rounded-full bg-forest-soft px-2.5 py-0.5 text-xs font-medium text-forest"
                           >
                             {item.tag}
                           </span>
                         ))
                       ) : (
-                        <span className="text-xs text-slate-500">No displayable tags yet</span>
+                        <span className="text-xs text-ink-faint">No displayable tags yet</span>
                       )}
                     </div>
                   </div>
                   <div className="mt-4">
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-walnut">
                       Theme lean
                     </p>
                     <ul className="mt-2 space-y-1.5">
@@ -521,49 +529,49 @@ export function ProfilePageClient({ data, loadWarning }: ProfilePageProps) {
                             key={item.id}
                             className="grid grid-cols-[minmax(0,1fr)_2.5rem] items-center gap-2 text-xs"
                           >
-                            <span className="truncate text-slate-600">{item.label}</span>
-                            <span className="text-right font-medium tabular-nums text-slate-500">
+                            <span className="truncate text-ink-soft">{item.label}</span>
+                            <span className="text-right font-medium tabular-nums text-ink-faint">
                               {item.score}%
                             </span>
                           </li>
                         ))}
                     </ul>
                   </div>
-                  <p className="mt-4 text-xs text-slate-500">
+                  <p className="mt-4 text-xs text-ink-faint">
                     Usual length:{" "}
-                    <span className="font-medium text-slate-700">{taste.preferredLength}</span>
+                    <span className="font-medium text-ink">{taste.preferredLength}</span>
                   </p>
                 </>
               )}
 
               <Link href="/compatibility" className={`mt-4 inline-block ${linkClassName}`}>
-                Open compatibility →
+                Open matches →
               </Link>
             </section>
 
             <section
               id="preferences"
-              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+              className="reading-room-card rounded-2xl p-5"
             >
-              <h2 className="text-sm font-semibold text-slate-900">Preferences</h2>
-              <p className="mt-1 text-xs text-slate-500">Manual overrides for scoring</p>
+              <h2 className="text-2xl font-semibold text-ink">Preferences</h2>
+              <p className="mt-1 text-xs text-ink-faint">Manual overrides for matching</p>
 
               <form className="mt-4 space-y-3" onSubmit={savePreferences}>
                 <label className="block">
-                  <span className="text-xs font-medium text-slate-600">Favorite genres</span>
+                  <span className="text-xs font-medium text-ink-soft">Favorite genres</span>
                   <input
                     value={genresInput}
                     onChange={(event) => setGenresDraft(event.target.value)}
                     placeholder="science fiction, mystery"
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none ring-teal-500 focus:ring-2"
+                    className="mt-1 w-full rounded-lg border border-rule bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-forest focus:ring-2 focus:ring-forest/20"
                   />
                 </label>
                 <label className="block">
-                  <span className="text-xs font-medium text-slate-600">Preferred length</span>
+                  <span className="text-xs font-medium text-ink-soft">Preferred length</span>
                   <select
                     name="preferredLength"
                     defaultValue={profile.preferences.preferredLength}
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none ring-teal-500 focus:ring-2"
+                    className="mt-1 w-full rounded-lg border border-rule bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-forest focus:ring-2 focus:ring-forest/20"
                   >
                     <option value="any">Any</option>
                     <option value="short">Short</option>
@@ -572,7 +580,7 @@ export function ProfilePageClient({ data, loadWarning }: ProfilePageProps) {
                   </select>
                 </label>
                 <label className="block">
-                  <span className="text-xs font-medium text-slate-600">Minimum community rating</span>
+                  <span className="text-xs font-medium text-ink-soft">Minimum community rating</span>
                   <input
                     name="minCommunityRating"
                     type="number"
@@ -581,15 +589,15 @@ export function ProfilePageClient({ data, loadWarning }: ProfilePageProps) {
                     step={0.1}
                     defaultValue={profile.preferences.minCommunityRating ?? ""}
                     placeholder="e.g. 3.5"
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none ring-teal-500 focus:ring-2"
+                    className="mt-1 w-full rounded-lg border border-rule bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-forest focus:ring-2 focus:ring-forest/20"
                   />
                 </label>
                 <label className="block">
-                  <span className="text-xs font-medium text-slate-600">Reading pace</span>
+                  <span className="text-xs font-medium text-ink-soft">Reading pace</span>
                   <select
                     name="pace"
                     defaultValue={profile.preferences.pace}
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none ring-teal-500 focus:ring-2"
+                    className="mt-1 w-full rounded-lg border border-rule bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-forest focus:ring-2 focus:ring-forest/20"
                   >
                     <option value="any">Any</option>
                     <option value="fast">Fast</option>
@@ -608,7 +616,7 @@ export function ProfilePageClient({ data, loadWarning }: ProfilePageProps) {
 
       {statusMessage ? (
         <div
-          className="pointer-events-none fixed bottom-4 left-1/2 z-40 -translate-x-1/2 rounded-full bg-slate-900 px-3 py-1.5 text-xs font-medium text-white shadow-sm"
+          className="pointer-events-none fixed bottom-4 left-1/2 z-40 -translate-x-1/2 rounded-full bg-forest px-3 py-1.5 text-xs font-medium text-white shadow-sm"
           role="status"
         >
           {statusMessage}

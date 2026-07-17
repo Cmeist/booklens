@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { BookCover } from "@/components/book-cover";
 import { BookTags } from "@/components/book-tags";
 import { LogBookControls } from "@/components/log-book-controls";
 import { ThemeProfile } from "@/components/theme-profile";
@@ -14,48 +15,13 @@ import {
 import type { Book, BookRecommendation, RecommendationWithBook } from "@/lib/types";
 import { linkClassName } from "@/lib/ui";
 
-function BookCover({ book, size = "md" }: { book: Book; size?: "sm" | "md" | "lg" }) {
-  const sizeClasses = {
-    sm: "h-16 w-12 text-xs",
-    md: "h-24 w-16 text-sm",
-    lg: "h-40 w-28 text-lg",
-  }[size];
-
-  if (book.coverUrl) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={book.coverUrl}
-        alt={`Cover of ${book.title}`}
-        className={`${sizeClasses} shrink-0 rounded-md object-cover shadow-sm ring-1 ring-black/5`}
-      />
-    );
-  }
-
-  const initials = book.title
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((word) => word[0])
-    .join("")
-    .toUpperCase();
-
-  return (
-    <div
-      className={`${sizeClasses} flex shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-teal-700 to-slate-800 font-semibold text-white shadow-sm ring-1 ring-black/5`}
-      aria-hidden="true"
-    >
-      {initials}
-    </div>
-  );
-}
-
 function ReasonChips({ reasons }: { reasons: string[] }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {reasons.map((reason) => (
         <span
           key={reason}
-          className="rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-medium text-teal-800 ring-1 ring-teal-100"
+          className="rounded-full bg-forest-soft px-2.5 py-0.5 text-xs font-medium text-forest ring-1 ring-forest/10"
         >
           {reason}
         </span>
@@ -66,11 +32,11 @@ function ReasonChips({ reasons }: { reasons: string[] }) {
 
 function MetadataItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg bg-slate-50 px-3 py-2 ring-1 ring-slate-100">
-      <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
+    <div className="rounded-lg bg-paper-deep/55 px-3 py-2 ring-1 ring-rule/70">
+      <dt className="text-[11px] font-medium uppercase tracking-wide text-ink-faint">
         {label}
       </dt>
-      <dd className="mt-0.5 text-sm font-medium text-slate-900">{value}</dd>
+      <dd className="mt-0.5 text-sm font-medium text-ink">{value}</dd>
     </div>
   );
 }
@@ -85,16 +51,16 @@ function RecommendationCard({
   href?: string;
 }) {
   const content = (
-    <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:border-slate-300">
+    <article className="reading-room-card rounded-xl p-4 transition-colors hover:border-rule-strong">
       <div className="flex gap-3">
         <BookCover book={book} size="sm" />
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <h4 className="text-sm font-semibold text-slate-900">{book.title}</h4>
-              <p className="text-xs text-slate-600">{book.author}</p>
+              <h4 className="text-base font-semibold text-ink">{book.title}</h4>
+              <p className="text-xs text-ink-soft">{book.author}</p>
             </div>
-            <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+            <span className="shrink-0 rounded-full bg-walnut-soft px-2 py-0.5 text-[11px] font-semibold text-walnut-deep">
               {formatScore(recommendation.score)}
             </span>
           </div>
@@ -127,8 +93,8 @@ function SimilarBooksSection({
   return (
     <div>
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-slate-900">Similar books</h3>
-        <span className="text-xs text-slate-500">{recommendationPairs.length} matches</span>
+        <h3 className="text-lg font-semibold text-ink">Similar books</h3>
+        <span className="text-xs text-ink-faint">{recommendationPairs.length} matches</span>
       </div>
       <div className="mt-3 space-y-3">
         {recommendationPairs.length > 0 ? (
@@ -141,7 +107,7 @@ function SimilarBooksSection({
             />
           ))
         ) : (
-          <p className="rounded-lg bg-slate-50 px-3 py-4 text-sm text-slate-500">
+          <p className="rounded-lg bg-paper-deep/55 px-3 py-4 text-sm text-ink-faint">
             No recommendations available for this book yet.
           </p>
         )}
@@ -162,7 +128,7 @@ function BookDetailContent({
   return (
     <>
       {mode === "preview" ? (
-        <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">
+        <p className="editorial-rule text-xs font-semibold uppercase tracking-[0.16em] text-walnut">
           Selected book
         </p>
       ) : null}
@@ -173,18 +139,18 @@ function BookDetailContent({
           <h2
             className={
               mode === "page"
-                ? "text-2xl font-semibold text-slate-900 sm:text-3xl"
-                : "text-xl font-semibold text-slate-900"
+                ? "text-3xl font-semibold text-ink sm:text-4xl"
+                : "text-2xl font-semibold text-ink"
             }
           >
             {book.title}
           </h2>
-          <p className="mt-1 text-sm text-slate-600">{book.author}</p>
+          <p className="mt-1 text-sm text-ink-soft">{book.author}</p>
           <BookTags tags={book.tags} mode={mode} />
         </div>
       </div>
 
-      <p className="mt-4 text-sm leading-relaxed text-slate-700">{book.description}</p>
+      <p className="mt-4 text-sm leading-7 text-ink-soft">{book.description}</p>
 
       <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <MetadataItem label="Year" value={formatYear(book.publicationYear, book.decade)} />
@@ -194,10 +160,15 @@ function BookDetailContent({
       </dl>
 
       {mode === "page" ? (
-        <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <MetadataItem label="Source" value={book.source} />
-          <MetadataItem label="Source ID" value={book.sourceId} />
-        </dl>
+        <details className="group mt-3 rounded-lg border border-rule bg-paper-raised px-3 py-2">
+          <summary className="cursor-pointer text-xs font-semibold text-ink-soft marker:text-walnut">
+            Catalog source details
+          </summary>
+          <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <MetadataItem label="Source" value={book.source} />
+            <MetadataItem label="Source ID" value={book.sourceId} />
+          </dl>
+        </details>
       ) : null}
 
       <LogBookControls book={book} />
@@ -236,13 +207,13 @@ function CardTags({ tags }: { tags: string[] }) {
       {visible.map((tag) => (
         <span
           key={tag}
-          className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600"
+          className="rounded-full bg-paper-deep px-2 py-0.5 text-[10px] font-medium text-ink-soft"
         >
           {tag}
         </span>
       ))}
       {overflow > 0 ? (
-        <span className="rounded-full bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-500 ring-1 ring-slate-200">
+        <span className="rounded-full bg-paper-raised px-2 py-0.5 text-[10px] font-medium text-ink-faint ring-1 ring-rule">
           +{overflow} more
         </span>
       ) : null}
@@ -263,21 +234,21 @@ function BookListCard({
     <article
       className={`w-full rounded-xl border p-4 transition-colors ${
         selected
-          ? "border-teal-500 bg-teal-50/60 shadow-sm ring-1 ring-teal-200"
-          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+          ? "border-forest bg-forest-soft/65 shadow-sm ring-1 ring-forest/20"
+          : "border-rule bg-paper-raised hover:border-rule-strong hover:bg-paper-deep/35"
       }`}
     >
       <div className="flex gap-3">
         <button type="button" onClick={() => onSelect(book.id)} className="flex min-w-0 flex-1 gap-3 text-left">
           <BookCover book={book} size="sm" />
           <div className="min-w-0 flex-1">
-            <h3 className="truncate text-sm font-semibold text-slate-900">{book.title}</h3>
-            <p className="text-xs text-slate-600">{book.author}</p>
+            <h3 className="truncate text-base font-semibold text-ink">{book.title}</h3>
+            <p className="text-xs text-ink-soft">{book.author}</p>
             <CardTags tags={book.tags} />
-            <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-slate-500">
+            <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-ink-faint">
               {book.description}
             </p>
-            <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-slate-500">
+            <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-ink-faint">
               <span>{formatYear(book.publicationYear, book.decade)}</span>
               <span>{formatPageLength(book.pageCount)}</span>
               <span>
@@ -305,7 +276,7 @@ function BookDetailPanel({
   recommendationPairs: RecommendationWithBook[];
 }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-6">
+    <section className="reading-room-card rounded-2xl p-5 lg:sticky lg:top-24">
       <BookDetailContent
         book={book}
         recommendationPairs={recommendationPairs}

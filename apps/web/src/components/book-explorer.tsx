@@ -39,7 +39,7 @@ type BookExplorerProps = {
 };
 
 const pagerButtonClassName =
-  "rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white";
+  "rounded-full bg-paper-raised px-3 py-1.5 text-xs font-semibold text-ink-soft ring-1 ring-rule transition-colors hover:bg-paper-deep disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-paper-raised";
 
 export function BookExplorer({ data, loadWarning }: BookExplorerProps) {
   const { books, topTags, recommendations, source } = data;
@@ -48,6 +48,7 @@ export function BookExplorer({ data, loadWarning }: BookExplorerProps) {
   const [showAllTopTags, setShowAllTopTags] = useState(false);
   const [tagSearchQuery, setTagSearchQuery] = useState("");
   const [resultsPage, setResultsPage] = useState(1);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const decadeOptions = useMemo(() => getDecadeOptions(books), [books]);
 
@@ -163,45 +164,63 @@ export function BookExplorer({ data, loadWarning }: BookExplorerProps) {
         </div>
       ) : null}
 
-      <header className="border-b border-slate-200/80 bg-white/90 backdrop-blur">
-        <div className={`${contentContainerClassName} flex flex-col gap-4 py-5`}>
+      <header className="border-b border-rule bg-paper-raised/75">
+        <div className={`${contentContainerClassName} flex flex-col gap-5 py-7 sm:py-9`}>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-                Explore
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-walnut">Browse the shelves</p>
+              <h1 className="mt-1 text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
+                Discover
               </h1>
-              <p className="mt-1 max-w-2xl text-sm text-slate-600">
-                Search, filter, and inspect explainable recommendations from the{" "}
-                {dataSourceLabel.toLowerCase()} dataset.
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-soft">
+                Search the collection, refine by the details that matter, and open any
+                volume to see its themes and explainable recommendations.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <div className={`${dataBadgeClassName} bg-slate-100 text-slate-600 ring-0`}>
+              <div className={`${dataBadgeClassName} bg-walnut-soft text-walnut-deep ring-walnut/10`}>
                 {visibleBooks.length} of {books.length} books shown
               </div>
               <div className={dataBadgeClassName}>Data: {dataSourceLabel}</div>
             </div>
           </div>
 
-          <FilterControls
-            filters={filters}
-            decadeOptions={decadeOptions}
-            onChange={updateFilters}
-          />
+          <button
+            type="button"
+            className="flex w-full items-center justify-between rounded-xl border border-rule bg-paper px-4 py-3 text-sm font-semibold text-ink lg:hidden"
+            aria-expanded={filtersOpen}
+            aria-controls="discover-filter-panel"
+            onClick={() => setFiltersOpen((current) => !current)}
+          >
+            Refine this shelf
+            <span className="text-walnut" aria-hidden="true">
+              {filtersOpen ? "Hide" : "Show"}
+            </span>
+          </button>
 
-          <ActiveFilterChips
-            filters={filters}
-            onClearChip={clearChip}
-            onClearAll={clearAllFilters}
-          />
+          <div
+            id="discover-filter-panel"
+            className={`${filtersOpen ? "space-y-4" : "hidden"} lg:block lg:space-y-4`}
+          >
+            <FilterControls
+              filters={filters}
+              decadeOptions={decadeOptions}
+              onChange={updateFilters}
+            />
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+            <ActiveFilterChips
+              filters={filters}
+              onClearChip={clearChip}
+              onClearAll={clearAllFilters}
+            />
+
+            <div className="reading-room-card rounded-2xl p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-walnut">
                   Tag filters
                 </p>
-                <p className="mt-0.5 text-xs text-slate-500">Top catalog tags</p>
+                <p className="mt-0.5 text-xs text-ink-faint">Include a shelf or explicitly exclude one</p>
               </div>
               <label className="block sm:w-72">
                 <span className="sr-only">Search tags</span>
@@ -210,7 +229,7 @@ export function BookExplorer({ data, loadWarning }: BookExplorerProps) {
                   value={tagSearchQuery}
                   onChange={(event) => setTagSearchQuery(event.target.value)}
                   placeholder="Search tags"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none ring-teal-500 placeholder:text-slate-400 focus:ring-2"
+                  className="w-full rounded-xl border border-rule bg-paper px-3 py-2 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-forest focus:ring-2 focus:ring-forest/20"
                 />
               </label>
             </div>
@@ -221,10 +240,10 @@ export function BookExplorer({ data, loadWarning }: BookExplorerProps) {
                   key={item.tag}
                   className={`inline-flex items-center rounded-full text-xs font-medium ring-1 ${
                     filters.excludeTags.includes(item.tag)
-                      ? "bg-rose-50 text-rose-800 ring-rose-100"
+                      ? "bg-danger-soft text-danger ring-danger/20"
                       : filters.includeTags.includes(item.tag)
-                        ? "bg-teal-700 text-white ring-teal-700"
-                        : "bg-white text-slate-700 ring-slate-200"
+                        ? "bg-forest text-white ring-forest"
+                        : "bg-paper-raised text-ink-soft ring-rule"
                   }`}
                 >
                   <button
@@ -245,7 +264,7 @@ export function BookExplorer({ data, loadWarning }: BookExplorerProps) {
                     aria-pressed={filters.excludeTags.includes(item.tag)}
                     title={`Exclude ${item.tag}`}
                   >
-                    -
+                    Not
                   </button>
                 </span>
               ))}
@@ -253,7 +272,7 @@ export function BookExplorer({ data, loadWarning }: BookExplorerProps) {
                 <button
                   type="button"
                   onClick={() => setShowAllTopTags((current) => !current)}
-                  className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-slate-50"
+                  className="rounded-full bg-paper-raised px-3 py-1.5 text-xs font-medium text-ink-soft ring-1 ring-rule transition-colors hover:bg-paper-deep"
                 >
                   {showAllTopTags && !tagSearchQuery.trim()
                     ? "Show fewer"
@@ -261,10 +280,11 @@ export function BookExplorer({ data, loadWarning }: BookExplorerProps) {
                 </button>
               ) : null}
               {tagSearchActive && visibleTopTags.length === 0 ? (
-                <p className="px-1 py-1.5 text-xs text-slate-500">
+                <p className="px-1 py-1.5 text-xs text-ink-faint">
                   No top tags match {tagSearch}.
                 </p>
               ) : null}
+            </div>
             </div>
           </div>
         </div>
@@ -274,11 +294,12 @@ export function BookExplorer({ data, loadWarning }: BookExplorerProps) {
         <section aria-label="Book results" className="min-w-0">
           <div className="mb-3 flex items-end justify-between gap-3">
             <div>
-              <h2 className="text-sm font-semibold text-slate-900">Results</h2>
-              <p className="mt-0.5 text-xs text-slate-500">{rangeLabel}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-walnut">Current selection</p>
+              <h2 className="mt-0.5 text-2xl font-semibold text-ink">Results</h2>
+              <p className="mt-0.5 text-xs text-ink-faint">{rangeLabel}</p>
             </div>
             {totalPages > 1 ? (
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-ink-faint">
                 Page {page} of {totalPages}
               </p>
             ) : null}
@@ -310,7 +331,7 @@ export function BookExplorer({ data, loadWarning }: BookExplorerProps) {
                   >
                     Previous
                   </button>
-                  <p className="text-xs font-medium text-slate-600">
+                  <p className="text-xs font-medium text-ink-soft">
                     Page {page} of {totalPages}
                   </p>
                   <button
@@ -325,9 +346,9 @@ export function BookExplorer({ data, loadWarning }: BookExplorerProps) {
               ) : null}
             </>
           ) : (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center">
-              <p className="text-sm font-medium text-slate-900">No books match these filters.</p>
-              <p className="mt-1 text-sm text-slate-600">
+            <div className="rounded-2xl border border-dashed border-rule-strong bg-paper-raised px-6 py-10 text-center">
+              <p className="text-lg font-semibold text-ink">No books match these filters.</p>
+              <p className="mt-1 text-sm text-ink-soft">
                 Try removing a filter chip or clearing all filters to restore the full list.
               </p>
               <button
@@ -342,11 +363,11 @@ export function BookExplorer({ data, loadWarning }: BookExplorerProps) {
         </section>
 
         {selectedBook ? (
-          <div className="min-w-0 lg:sticky lg:top-6 lg:self-start">
+          <div className="order-first min-w-0 lg:order-none lg:self-start">
             <BookDetailPanel book={selectedBook} recommendationPairs={recommendationPairs} />
           </div>
         ) : (
-          <div className="hidden rounded-2xl border border-dashed border-slate-200 bg-white/70 px-5 py-8 text-center text-sm text-slate-500 lg:block">
+          <div className="hidden rounded-2xl border border-dashed border-rule bg-paper-raised/70 px-5 py-8 text-center text-sm text-ink-faint lg:block">
             Select a book to preview details and similar titles.
           </div>
         )}

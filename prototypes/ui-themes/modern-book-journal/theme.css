@@ -1,0 +1,98 @@
+:root {
+  --page: #fffdf8;
+  --surface: #ffffff;
+  --ink: #101010;
+  --muted: #5f5d59;
+  --line: #171717;
+  --accent: #3155e7;
+  --primary: #111111;
+  --on-primary: #ffffff;
+  --rating: #c84f35;
+  --match: #3155e7;
+  --selected-line: #3155e7;
+  --selected-bg: #eef1ff;
+  --selected-shadow: 7px 7px 0 #3155e7;
+  --focus: #3155e7;
+  --focus-soft: rgba(49,85,231,.18);
+  --font-body: "Helvetica Neue", Helvetica, Arial, ui-sans-serif, sans-serif;
+  --font-display: "Arial Black", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-label: "Courier New", ui-monospace, monospace;
+  --display-weight: 900;
+  --display-spacing: -.055em;
+  --content: 1320px;
+  --section-space: 86px;
+  --section-rule: 4px solid #111111;
+  --button-radius: 3px;
+  --pill-radius: 3px;
+  --panel-radius: 4px;
+  --hero-radius: 2px;
+  --cover-radius: 0;
+  --cover-shadow: 8px 8px 0 rgba(16,16,16,.16);
+  --cover-fallback: linear-gradient(160deg, #3155e7 0 54%, #ffce3c 54% 72%, #e45c43 72%);
+  --cover-fallback-ink: #ffffff;
+  --panel-shadow: none;
+  --art-fallback: #ffcf39;
+  --art-image: url("/modern-book-journal/artwork.webp");
+  --art-gradient: linear-gradient(135deg, #3155e7 0 45%, #ffcf39 45% 70%, #e85b43 70%);
+  --art-shadow: 14px 14px 0 #111111;
+  --art-border: 3px solid #111111;
+  --art-caption: #ffffff;
+  --contrast-surface: #ffcf39;
+  --contrast-ink: #111111;
+  --contrast-muted: #28251e;
+  --contrast-accent: #3155e7;
+  --reason-border: #111111;
+  --reason-bg: #ffffff;
+  --reason-ink: #111111;
+  --field-line: #111111;
+  --field-radius: 2px;
+  --field-bg: #ffffff;
+  --result-gap: 18px;
+  --card-border: 2px solid #111111;
+  --card-radius: 2px;
+  --card-padding: 18px;
+  --card-bg: #ffffff;
+  --card-shadow: 6px 6px 0 #e5e2d9;
+  --preview-border: 3px solid #111111;
+  --bar-track: #dedbd2;
+  --bar-fill: #3155e7;
+}
+
+.site-nav { width: 100%; border-block: 3px solid var(--ink); padding: 14px max(24px, calc((100% - var(--content)) / 2)); background: var(--ink); color: white; }
+.wordmark-mark { color: #ffcf39; }
+.site-nav nav a { color: #bbb; text-transform: uppercase; }
+.site-nav nav a.active { color: #ffcf39; }
+.site-nav .button.quiet { color: white; }
+.site-nav .button.secondary { border-color: white; background: white; color: black; }
+.hero { border-bottom: 4px solid var(--ink); padding-top: 70px; }
+.hero-grid { grid-template-columns: minmax(0, 1.1fr) minmax(430px, .72fr); }
+.hero .eyebrow { display: inline-block; padding: 5px 7px; background: #ffcf39; color: #111; }
+.display-title { max-width: 760px; text-transform: uppercase; }
+.hero-art { min-height: 520px; transform: rotate(1deg); }
+.metric-strip { position: relative; z-index: 4; margin-top: -3px; border: 3px solid var(--ink); box-shadow: 8px 8px 0 #3155e7; }
+.metric { border-right: 2px solid var(--ink); }
+.metric:last-child { border-right: 0; }
+.section-title, .page-title { text-transform: uppercase; }
+.section-heading { align-items: start; }
+.section-heading .eyebrow { color: #c84f35; }
+.book-tile .book-title { text-transform: uppercase; }
+.book-tile:nth-child(3n+2) .book-cover { box-shadow: 8px 8px 0 #ffcf39; }
+.book-tile:nth-child(3n+3) .book-cover { box-shadow: 8px 8px 0 #3155e7; }
+.match-panel { border: 3px solid var(--ink); }
+.match-panel h3 { text-transform: uppercase; }
+.low-signal { border: 2px solid var(--ink); border-radius: 0; background: #eef1ff; }
+.result-card.selected { transform: translate(-3px, -3px); }
+.detail-preview { top: 14px; }
+.book-hero { border-bottom: 4px solid var(--ink); background: #f2efdf; }
+.book-hero h1 { text-transform: uppercase; }
+.profile-card { border-width: 3px; box-shadow: 9px 9px 0 #3155e7; }
+.catalog-note { border-width: 3px; background: #ffcf39; }
+
+@media (max-width: 820px) {
+  .site-nav { padding-inline: 16px; }
+  .hero-grid { grid-template-columns: 1fr; }
+  .hero-art { min-height: 320px; transform: none; }
+  .metric-strip { box-shadow: 5px 5px 0 #3155e7; }
+  .metric:nth-child(2) { border-right: 0; }
+  .metric:nth-child(-n+2) { border-bottom: 2px solid var(--ink); }
+}

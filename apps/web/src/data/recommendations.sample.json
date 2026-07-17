@@ -2,7 +2,7 @@
   {
     "bookId": "99afb55d528e0d0f",
     "similarBookId": "b39eb765a5842ff5",
-    "score": 0.3897,
+    "score": 0.4314,
     "reasons": [
       "Shared tag",
       "Similar description",
@@ -13,7 +13,7 @@
   {
     "bookId": "99afb55d528e0d0f",
     "similarBookId": "56975a8e7562fc5e",
-    "score": 0.11,
+    "score": 0.1225,
     "reasons": [
       "Shared tag",
       "Similar rating profile"
@@ -22,7 +22,7 @@
   {
     "bookId": "99afb55d528e0d0f",
     "similarBookId": "3a287e49ae30be90",
-    "score": 0.11,
+    "score": 0.1225,
     "reasons": [
       "Shared tag",
       "Similar rating profile"
@@ -50,7 +50,7 @@
   {
     "bookId": "56975a8e7562fc5e",
     "similarBookId": "99afb55d528e0d0f",
-    "score": 0.11,
+    "score": 0.1225,
     "reasons": [
       "Shared tag",
       "Similar rating profile"
@@ -69,7 +69,7 @@
   {
     "bookId": "3a287e49ae30be90",
     "similarBookId": "99afb55d528e0d0f",
-    "score": 0.11,
+    "score": 0.1225,
     "reasons": [
       "Shared tag",
       "Similar rating profile"
@@ -87,7 +87,7 @@
   {
     "bookId": "b39eb765a5842ff5",
     "similarBookId": "99afb55d528e0d0f",
-    "score": 0.3897,
+    "score": 0.4314,
     "reasons": [
       "Shared tag",
       "Similar description",

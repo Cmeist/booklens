@@ -43,15 +43,15 @@ export default async function BookDetailPage({ params }: BookDetailPageProps) {
         </div>
       ) : null}
 
-      <div className={`${contentContainerClassName} max-w-4xl py-8`}>
+      <div className={`${contentContainerClassName} max-w-4xl py-8 sm:py-12`}>
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <Link href="/explore" className={linkClassName}>
-            ← Back to explore
+            ← Back to Discover
           </Link>
           <span className={dataBadgeClassName}>Data: {dataSourceLabel}</span>
         </div>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="reading-room-card rounded-2xl p-5 sm:p-8">
           <BookDetailContent
             book={book}
             recommendationPairs={recommendationPairs}

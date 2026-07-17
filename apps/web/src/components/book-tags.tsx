@@ -9,13 +9,13 @@ import {
 } from "@/lib/display-tags";
 
 const tagPillClassName =
-  "rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700";
+  "rounded-full bg-paper-deep px-2.5 py-0.5 text-xs font-medium text-ink-soft";
 
 const overflowPillClassName =
-  "rounded-full bg-slate-50 px-2.5 py-0.5 text-xs font-medium text-slate-500 ring-1 ring-slate-200";
+  "rounded-full bg-paper-raised px-2.5 py-0.5 text-xs font-medium text-ink-faint ring-1 ring-rule";
 
 const toggleButtonClassName =
-  "rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-slate-50";
+  "rounded-full bg-paper-raised px-2.5 py-0.5 text-xs font-medium text-ink-soft ring-1 ring-rule transition-colors hover:bg-paper-deep";
 
 type BookTagsProps = {
   tags: string[];

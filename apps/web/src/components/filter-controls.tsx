@@ -73,7 +73,7 @@ export function FilterControls({
           value={filters.searchQuery}
           onChange={(event) => onChange({ ...filters, searchQuery: event.target.value })}
           placeholder="Search title, author, description, or tags"
-          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm outline-none ring-teal-500 placeholder:text-slate-400 focus:ring-2"
+          className="w-full rounded-xl border border-rule bg-paper-raised px-4 py-2.5 text-sm text-ink shadow-sm outline-none placeholder:text-ink-faint focus:border-forest focus:ring-2 focus:ring-forest/20"
         />
       </label>
 
@@ -84,7 +84,7 @@ export function FilterControls({
           onChange={(event) =>
             onChange({ ...filters, decade: event.target.value || null })
           }
-          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none focus:ring-2 focus:ring-teal-500"
+          className="w-full rounded-xl border border-rule bg-paper-raised px-3 py-2.5 text-sm text-ink shadow-sm outline-none focus:border-forest focus:ring-2 focus:ring-forest/20"
         >
           <option value="">All decades</option>
           {decadeOptions.map((decade) => (
@@ -105,7 +105,7 @@ export function FilterControls({
               minAverageRating: event.target.value ? Number(event.target.value) : null,
             })
           }
-          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none focus:ring-2 focus:ring-teal-500"
+          className="w-full rounded-xl border border-rule bg-paper-raised px-3 py-2.5 text-sm text-ink shadow-sm outline-none focus:border-forest focus:ring-2 focus:ring-forest/20"
         >
           {MIN_RATING_OPTIONS.map((option) => (
             <option key={option.label} value={option.value}>
@@ -125,7 +125,7 @@ export function FilterControls({
             }
             onChange({ ...filters, ...parsePageCountPreset(event.target.value) });
           }}
-          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none focus:ring-2 focus:ring-teal-500"
+          className="w-full rounded-xl border border-rule bg-paper-raised px-3 py-2.5 text-sm text-ink shadow-sm outline-none focus:border-forest focus:ring-2 focus:ring-forest/20"
         >
           {PAGE_COUNT_PRESETS.map((option) => (
             <option key={option.label} value={option.value}>
@@ -145,7 +145,7 @@ export function FilterControls({
               minRatingCount: event.target.value ? Number(event.target.value) : null,
             })
           }
-          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none focus:ring-2 focus:ring-teal-500"
+          className="w-full rounded-xl border border-rule bg-paper-raised px-3 py-2.5 text-sm text-ink shadow-sm outline-none focus:border-forest focus:ring-2 focus:ring-forest/20"
         >
           {MIN_RATING_COUNT_OPTIONS.map((option) => (
             <option key={option.label} value={option.value}>
@@ -174,7 +174,7 @@ export function ActiveFilterChips({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+      <span className="text-xs font-semibold uppercase tracking-wide text-walnut">
         Active filters
       </span>
       {chips.map((chip) => (
@@ -182,10 +182,10 @@ export function ActiveFilterChips({
           key={`${chip.key}-${chip.label}`}
           type="button"
           onClick={() => onClearChip(chip)}
-          className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+          className="inline-flex items-center gap-1.5 rounded-full bg-paper-raised px-3 py-1 text-xs font-medium text-ink-soft ring-1 ring-rule hover:bg-paper-deep"
         >
           {chip.label}
-          <span aria-hidden="true" className="text-slate-400">
+          <span aria-hidden="true" className="text-walnut">
             ×
           </span>
           <span className="sr-only">Remove filter</span>
@@ -194,7 +194,7 @@ export function ActiveFilterChips({
       <button
         type="button"
         onClick={onClearAll}
-        className="text-xs font-medium text-teal-700 hover:text-teal-800"
+        className="text-xs font-semibold text-forest hover:text-walnut-deep"
       >
         Clear all
       </button>

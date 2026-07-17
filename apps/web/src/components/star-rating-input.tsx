@@ -37,12 +37,12 @@ function StarIcon({
           <rect x="0" y="0" width="12" height="24" />
         </clipPath>
       </defs>
-      <path d={STAR_PATH} className="fill-slate-200" />
+      <path d={STAR_PATH} className="fill-paper-deep" />
       {filled === "full" ? (
-        <path d={STAR_PATH} className="fill-amber-500" />
+        <path d={STAR_PATH} className="fill-walnut" />
       ) : null}
       {filled === "half" ? (
-        <path d={STAR_PATH} className="fill-amber-500" clipPath={`url(#${clipId})`} />
+        <path d={STAR_PATH} className="fill-walnut" clipPath={`url(#${clipId})`} />
       ) : null}
     </svg>
   );
@@ -91,7 +91,7 @@ export function StarRatingInput({
             >
               <button
                 type="button"
-                className="absolute inset-y-0 left-0 z-10 w-1/2 cursor-pointer rounded-l-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-amber-500"
+                className="absolute inset-y-0 left-0 z-10 w-1/2 cursor-pointer rounded-l-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-walnut"
                 aria-label={`Rate ${halfThreshold} stars`}
                 title={`${halfThreshold}★`}
                 onMouseEnter={() => setHoverValue(halfThreshold)}
@@ -101,7 +101,7 @@ export function StarRatingInput({
               />
               <button
                 type="button"
-                className="absolute inset-y-0 right-0 z-10 w-1/2 cursor-pointer rounded-r-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-amber-500"
+                className="absolute inset-y-0 right-0 z-10 w-1/2 cursor-pointer rounded-r-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-walnut"
                 aria-label={`Rate ${fullThreshold} stars`}
                 title={`${fullThreshold}★`}
                 onMouseEnter={() => setHoverValue(fullThreshold)}
@@ -121,7 +121,7 @@ export function StarRatingInput({
 
       <span
         className={`min-w-[1.75rem] tabular-nums text-xs font-medium ${
-          displayValue !== null ? "text-slate-700" : "text-slate-400"
+          displayValue !== null ? "text-ink-soft" : "text-ink-faint"
         }`}
         aria-live="polite"
       >
@@ -133,7 +133,7 @@ export function StarRatingInput({
           type="button"
           onClick={() => onChange(0)}
           onMouseEnter={() => setHoverValue(null)}
-          className="rounded-full px-2 py-0.5 text-[10px] font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+          className="rounded-full px-2 py-0.5 text-[10px] font-medium text-ink-faint transition-colors hover:bg-paper-deep hover:text-ink"
           aria-label="Clear rating"
         >
           Clear

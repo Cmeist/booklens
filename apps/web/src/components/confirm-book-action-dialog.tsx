@@ -21,14 +21,14 @@ const COPY: Record<
     prompt: "Add this book to your profile?",
     confirmLabel: "Add book",
     confirmClassName:
-      "rounded-full bg-teal-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60",
+      "rounded-full bg-forest px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-forest-deep disabled:cursor-not-allowed disabled:opacity-60",
   },
   remove: {
     heading: "Remove from profile",
     prompt: "Remove this book from your profile?",
     confirmLabel: "Remove book",
     confirmClassName:
-      "rounded-full bg-slate-800 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60",
+      "rounded-full bg-danger px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-danger/90 disabled:cursor-not-allowed disabled:opacity-60",
   },
 };
 
@@ -144,7 +144,7 @@ export function ConfirmBookActionDialog({
     <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center">
       <button
         type="button"
-        className="absolute inset-0 bg-slate-900/30"
+        className="absolute inset-0 bg-ink/40 backdrop-blur-[2px]"
         aria-label="Dismiss dialog"
         disabled={pending}
         onClick={() => {
@@ -159,20 +159,20 @@ export function ConfirmBookActionDialog({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        className="relative z-10 w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-lg outline-none"
+        className="reading-room-card relative z-10 w-full max-w-sm rounded-2xl p-5 outline-none"
         tabIndex={-1}
       >
-        <h2 id={titleId} className="text-sm font-semibold text-slate-900">
+        <h2 id={titleId} className="text-2xl font-semibold text-ink">
           {copy.heading}
         </h2>
         <div id={descriptionId} className="mt-3">
-          <p className="text-sm font-medium text-slate-900">{book.title}</p>
-          <p className="mt-0.5 text-xs text-slate-500">{book.author}</p>
-          <p className="mt-3 text-sm text-slate-600">{copy.prompt}</p>
+          <p className="text-sm font-medium text-ink">{book.title}</p>
+          <p className="mt-0.5 text-xs text-ink-faint">{book.author}</p>
+          <p className="mt-3 text-sm text-ink-soft">{copy.prompt}</p>
         </div>
 
         {error ? (
-          <p className="mt-3 text-xs text-rose-700" role="alert">
+          <p className="mt-3 text-xs text-danger" role="alert">
             {error}
           </p>
         ) : null}
@@ -183,7 +183,7 @@ export function ConfirmBookActionDialog({
             type="button"
             disabled={pending}
             onClick={onCancel}
-            className="rounded-full bg-white px-4 py-2 text-sm font-medium text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-full bg-paper-raised px-4 py-2 text-sm font-medium text-ink-soft ring-1 ring-rule transition-colors hover:bg-paper-deep disabled:cursor-not-allowed disabled:opacity-60"
           >
             Cancel
           </button>

@@ -1,53 +1,112 @@
-import type { Book, TopTag } from "@/lib/types";
+import type { Book, BookRecommendation } from "@/lib/types";
 
-const MIN_RATED_BOOKS_PER_TAG = 2;
 const MIN_POINTS_FOR_SCATTER = 2;
+const MAX_SCATTER_POINTS = 40;
+const MAX_REASON_ENTRIES = 6;
+const MAX_HIDDEN_GEMS = 5;
+const HIDDEN_GEM_MIN_RATING_COUNT = 3;
+const HIDDEN_GEM_MIN_AVERAGE_RATING = 4.0;
 
 export type DecadeCount = {
   decade: string;
   count: number;
 };
 
-export type TagRatingAverage = {
-  tag: string;
-  bookCount: number;
-  ratedBookCount: number;
-  averageRating: number | null;
-  hasEnoughRatingData: boolean;
+export type CoverageMetric = {
+  known: number;
+  total: number;
+  percent: number;
+};
+
+export type CatalogCoverage = {
+  rating: CoverageMetric;
+  pageCount: CoverageMetric;
+  publicationYear: CoverageMetric;
+  cover: CoverageMetric;
+};
+
+export type ReasonFrequency = {
+  reason: string;
+  count: number;
+};
+
+export type HiddenGem = {
+  id: string;
+  title: string;
+  averageRating: number;
+  ratingCount: number;
 };
 
 export type RatedBookPoint = {
   id: string;
   title: string;
-  pageCount: number | null;
-  ratingCount: number | null;
+  ratingCount: number;
   averageRating: number;
+};
+
+export type ScatterSeries = {
+  points: RatedBookPoint[];
+  totalEligible: number;
+  isCapped: boolean;
 };
 
 export type AnalyticsSnapshot = {
   bookCount: number;
-  ratedBookCount: number;
-  booksWithPageCount: number;
-  booksWithRatingCount: number;
-  booksWithDecade: number;
-  averageRating: number | null;
-  averagePageCount: number | null;
-  topTags: TopTag[];
+  coverage: CatalogCoverage;
   decadeDistribution: DecadeCount[];
-  averageRatingByTag: TagRatingAverage[];
-  pageCountVsRating: RatedBookPoint[];
-  ratingCountVsRating: RatedBookPoint[];
-  canShowPageCountVsRating: boolean;
-  canShowRatingCountVsRating: boolean;
-  canShowAverageRatingByTag: boolean;
   canShowDecadeDistribution: boolean;
+  ratingCountVsRating: ScatterSeries;
+  canShowRatingCountVsRating: boolean;
+  recommendationCoverage: CoverageMetric;
+  reasonFrequency: ReasonFrequency[];
+  canShowReasonFrequency: boolean;
+  hiddenGems: HiddenGem[];
+  canShowHiddenGems: boolean;
 };
 
-function average(values: number[]): number | null {
-  if (values.length === 0) {
-    return null;
+function coveragePercent(known: number, total: number): number {
+  if (total <= 0) {
+    return 0;
   }
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
+  return Math.round((known / total) * 100);
+}
+
+function coverageMetric(known: number, total: number): CoverageMetric {
+  return {
+    known,
+    total,
+    percent: coveragePercent(known, total),
+  };
+}
+
+export function buildCatalogCoverage(books: Book[]): CatalogCoverage {
+  const total = books.length;
+  let ratingKnown = 0;
+  let pageCountKnown = 0;
+  let publicationYearKnown = 0;
+  let coverKnown = 0;
+
+  for (const book of books) {
+    if (book.averageRating !== null) {
+      ratingKnown += 1;
+    }
+    if (book.pageCount !== null) {
+      pageCountKnown += 1;
+    }
+    if (book.publicationYear !== null) {
+      publicationYearKnown += 1;
+    }
+    if (book.coverUrl !== null && book.coverUrl.trim() !== "") {
+      coverKnown += 1;
+    }
+  }
+
+  return {
+    rating: coverageMetric(ratingKnown, total),
+    pageCount: coverageMetric(pageCountKnown, total),
+    publicationYear: coverageMetric(publicationYearKnown, total),
+    cover: coverageMetric(coverKnown, total),
+  };
 }
 
 export function buildDecadeDistribution(books: Book[]): DecadeCount[] {
@@ -63,103 +122,162 @@ export function buildDecadeDistribution(books: Book[]): DecadeCount[] {
     .sort((left, right) => left.decade.localeCompare(right.decade));
 }
 
-export function buildAverageRatingByTag(books: Book[]): TagRatingAverage[] {
-  const tagStats = new Map<string, { bookCount: number; ratings: number[] }>();
+export function filterValidRecommendations(
+  books: Book[],
+  recommendations: BookRecommendation[],
+): BookRecommendation[] {
+  const bookIds = new Set(books.map((book) => book.id));
 
-  for (const book of books) {
-    for (const tag of book.tags) {
-      const current = tagStats.get(tag) ?? { bookCount: 0, ratings: [] };
-      current.bookCount += 1;
-      if (book.averageRating !== null) {
-        current.ratings.push(book.averageRating);
-      }
-      tagStats.set(tag, current);
+  return recommendations.filter(
+    (recommendation) =>
+      bookIds.has(recommendation.bookId) &&
+      bookIds.has(recommendation.similarBookId) &&
+      recommendation.bookId !== recommendation.similarBookId,
+  );
+}
+
+export function buildRecommendationCoverage(
+  books: Book[],
+  validRecommendations: BookRecommendation[],
+): CoverageMetric {
+  const sources = new Set(validRecommendations.map((recommendation) => recommendation.bookId));
+  return coverageMetric(sources.size, books.length);
+}
+
+export function buildReasonFrequency(
+  validRecommendations: BookRecommendation[],
+): ReasonFrequency[] {
+  const counts = new Map<string, number>();
+
+  for (const recommendation of validRecommendations) {
+    const uniqueReasons = new Set(
+      recommendation.reasons.map((reason) => reason.trim()).filter((reason) => reason.length > 0),
+    );
+
+    for (const reason of uniqueReasons) {
+      counts.set(reason, (counts.get(reason) ?? 0) + 1);
     }
   }
 
-  return Array.from(tagStats.entries())
-    .map(([tag, stats]) => {
-      const ratedBookCount = stats.ratings.length;
-      const hasEnoughRatingData = ratedBookCount >= MIN_RATED_BOOKS_PER_TAG;
-      return {
-        tag,
-        bookCount: stats.bookCount,
-        ratedBookCount,
-        averageRating: hasEnoughRatingData ? average(stats.ratings) : null,
-        hasEnoughRatingData,
-      };
-    })
+  return Array.from(counts.entries())
+    .map(([reason, count]) => ({ reason, count }))
     .sort((left, right) => {
-      if (right.bookCount !== left.bookCount) {
-        return right.bookCount - left.bookCount;
+      if (right.count !== left.count) {
+        return right.count - left.count;
       }
-      return left.tag.localeCompare(right.tag);
-    });
+      return left.reason.localeCompare(right.reason);
+    })
+    .slice(0, MAX_REASON_ENTRIES);
 }
 
-function buildRatedBookPoints(
-  books: Book[],
-  requirePageCount: boolean,
-  requireRatingCount: boolean,
-): RatedBookPoint[] {
-  return books
-    .filter((book) => {
-      if (book.averageRating === null) {
-        return false;
-      }
-      if (requirePageCount && book.pageCount === null) {
-        return false;
-      }
-      if (requireRatingCount && book.ratingCount === null) {
-        return false;
-      }
-      return true;
-    })
+function median(values: number[]): number | null {
+  if (values.length === 0) {
+    return null;
+  }
+
+  const sorted = [...values].sort((left, right) => left - right);
+  const middle = Math.floor(sorted.length / 2);
+
+  if (sorted.length % 2 === 1) {
+    return sorted[middle];
+  }
+
+  return (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+export function buildHiddenGems(books: Book[]): HiddenGem[] {
+  const eligible = books.filter(
+    (book) =>
+      book.averageRating !== null &&
+      book.ratingCount !== null &&
+      book.ratingCount >= HIDDEN_GEM_MIN_RATING_COUNT,
+  );
+
+  const ratingCountMedian = median(eligible.map((book) => book.ratingCount as number));
+  if (ratingCountMedian === null) {
+    return [];
+  }
+
+  return eligible
+    .filter(
+      (book) =>
+        (book.ratingCount as number) <= ratingCountMedian &&
+        (book.averageRating as number) >= HIDDEN_GEM_MIN_AVERAGE_RATING,
+    )
     .map((book) => ({
       id: book.id,
       title: book.title,
-      pageCount: book.pageCount,
-      ratingCount: book.ratingCount,
       averageRating: book.averageRating as number,
-    }));
+      ratingCount: book.ratingCount as number,
+    }))
+    .sort((left, right) => {
+      if (right.averageRating !== left.averageRating) {
+        return right.averageRating - left.averageRating;
+      }
+      if (left.ratingCount !== right.ratingCount) {
+        return left.ratingCount - right.ratingCount;
+      }
+      const titleDelta = left.title.localeCompare(right.title);
+      if (titleDelta !== 0) {
+        return titleDelta;
+      }
+      return left.id.localeCompare(right.id);
+    })
+    .slice(0, MAX_HIDDEN_GEMS);
 }
 
-export function buildAnalyticsSnapshot(books: Book[], topTags: TopTag[]): AnalyticsSnapshot {
-  const ratedBooks = books.filter((book) => book.averageRating !== null);
-  const pageCounts = books
-    .map((book) => book.pageCount)
-    .filter((value): value is number => value !== null);
-  const ratingCounts = books
-    .map((book) => book.ratingCount)
-    .filter((value): value is number => value !== null);
+export function buildRatingCountScatter(books: Book[]): ScatterSeries {
+  const eligible = books
+    .filter((book) => book.averageRating !== null && book.ratingCount !== null)
+    .map((book) => ({
+      id: book.id,
+      title: book.title,
+      ratingCount: book.ratingCount as number,
+      averageRating: book.averageRating as number,
+    }))
+    .sort((left, right) => {
+      if (right.ratingCount !== left.ratingCount) {
+        return right.ratingCount - left.ratingCount;
+      }
+      const titleDelta = left.title.localeCompare(right.title);
+      if (titleDelta !== 0) {
+        return titleDelta;
+      }
+      return left.id.localeCompare(right.id);
+    });
 
-  const pageCountVsRating = buildRatedBookPoints(books, true, false);
-  const ratingCountVsRating = buildRatedBookPoints(books, false, true);
-  const averageRatingByTag = buildAverageRatingByTag(books);
+  const totalEligible = eligible.length;
+  const points = eligible.slice(0, MAX_SCATTER_POINTS);
+
+  return {
+    points,
+    totalEligible,
+    isCapped: totalEligible > MAX_SCATTER_POINTS,
+  };
+}
+
+export function buildAnalyticsSnapshot(
+  books: Book[],
+  recommendations: BookRecommendation[],
+): AnalyticsSnapshot {
   const decadeDistribution = buildDecadeDistribution(books);
-
-  const tagsWithEnoughRatings = averageRatingByTag.filter((item) => item.hasEnoughRatingData);
+  const validRecommendations = filterValidRecommendations(books, recommendations);
+  const reasonFrequency = buildReasonFrequency(validRecommendations);
+  const ratingCountVsRating = buildRatingCountScatter(books);
+  const hiddenGems = buildHiddenGems(books);
 
   return {
     bookCount: books.length,
-    ratedBookCount: ratedBooks.length,
-    booksWithPageCount: pageCounts.length,
-    booksWithRatingCount: ratingCounts.length,
-    booksWithDecade: books.filter((book) => book.decade !== null).length,
-    averageRating: average(ratedBooks.map((book) => book.averageRating as number)),
-    averagePageCount:
-      pageCounts.length > 0
-        ? Math.round(pageCounts.reduce((sum, value) => sum + value, 0) / pageCounts.length)
-        : null,
-    topTags,
+    coverage: buildCatalogCoverage(books),
     decadeDistribution,
-    averageRatingByTag,
-    pageCountVsRating,
-    ratingCountVsRating,
-    canShowPageCountVsRating: pageCountVsRating.length >= MIN_POINTS_FOR_SCATTER,
-    canShowRatingCountVsRating: ratingCountVsRating.length >= MIN_POINTS_FOR_SCATTER,
-    canShowAverageRatingByTag: tagsWithEnoughRatings.length > 0,
     canShowDecadeDistribution: decadeDistribution.some((item) => item.decade !== "Unknown decade"),
+    ratingCountVsRating,
+    canShowRatingCountVsRating: ratingCountVsRating.totalEligible >= MIN_POINTS_FOR_SCATTER,
+    recommendationCoverage: buildRecommendationCoverage(books, validRecommendations),
+    reasonFrequency,
+    canShowReasonFrequency: reasonFrequency.length > 0,
+    hiddenGems,
+    canShowHiddenGems: hiddenGems.length > 0,
   };
 }
 

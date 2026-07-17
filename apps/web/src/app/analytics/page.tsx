@@ -20,20 +20,25 @@ export default async function AnalyticsPage() {
         </div>
       ) : null}
 
-      <div className={`${contentContainerClassName} py-8`}>
-        <header className="mb-6 max-w-2xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-700">
-            BookLens
+      <div className={`${contentContainerClassName} py-8 sm:py-12`}>
+        <header className="mb-8 max-w-2xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-walnut">
+            A closer look at the collection
           </p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-            Analytics
+          <h1 className="mt-2 text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
+            Insights
           </h1>
-          <p className="mt-2 text-sm text-slate-600">
-            Dataset summaries and trend views for the loaded catalog.
+          <p className="mt-2 text-sm leading-6 text-ink-soft">
+            Catalog coverage, publication shape, and recommendation discovery signals for the loaded
+            dataset.
           </p>
         </header>
 
-        <AnalyticsSection books={data.books} topTags={data.topTags} source={data.source} />
+        <AnalyticsSection
+          books={data.books}
+          recommendations={data.recommendations}
+          source={data.source}
+        />
       </div>
     </div>
   );

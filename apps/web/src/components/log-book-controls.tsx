@@ -42,7 +42,7 @@ export function LogBookControls({ book, compact = false }: LogBookControlsProps)
 
   if (!hydrated) {
     return (
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-ink-faint">
         {compact ? "…" : "Loading profile…"}
       </p>
     );
@@ -91,7 +91,7 @@ export function LogBookControls({ book, compact = false }: LogBookControlsProps)
     ) : null;
 
   const statusNote = statusMessage ? (
-    <p className="text-xs text-teal-700" role="status">
+    <p className="text-xs text-forest" role="status">
       {statusMessage}
     </p>
   ) : null;
@@ -103,12 +103,16 @@ export function LogBookControls({ book, compact = false }: LogBookControlsProps)
           <button
             type="button"
             onClick={() => setConfirmAction("add")}
-            className="rounded-full bg-teal-700 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-teal-800"
+            className="rounded-full border px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition-[filter] hover:brightness-90"
+            style={{
+              backgroundColor: "var(--forest, #234b3b)",
+              borderColor: "var(--forest-deep, #17382c)",
+            }}
           >
             Log book
           </button>
           <Link href={`/compatibility?book=${book.id}`} className={linkClassName}>
-            Compatibility
+            See match
           </Link>
           {statusNote}
         </div>
@@ -122,7 +126,7 @@ export function LogBookControls({ book, compact = false }: LogBookControlsProps)
       <div className={compact ? "space-y-2" : "mt-4 space-y-3"}>
         <div className="flex flex-wrap items-center gap-2">
           <div
-            className="inline-flex overflow-hidden rounded-lg ring-1 ring-slate-200"
+            className="inline-flex overflow-hidden rounded-lg ring-1 ring-rule"
             role="group"
             aria-label="Reading status"
           >
@@ -132,11 +136,11 @@ export function LogBookControls({ book, compact = false }: LogBookControlsProps)
                 type="button"
                 onClick={() => logAs(status)}
                 className={`px-2.5 py-1 text-[11px] font-medium transition-colors ${
-                  index > 0 ? "border-l border-slate-200" : ""
+                  index > 0 ? "border-l border-rule" : ""
                 } ${
                   entry.status === status
-                    ? "bg-teal-700 text-white"
-                    : "bg-white text-slate-600 hover:bg-slate-50"
+                    ? "bg-forest text-white"
+                    : "bg-paper-raised text-ink-soft hover:bg-paper-deep"
                 }`}
               >
                 {LOG_STATUS_LABELS[status]}
@@ -147,18 +151,18 @@ export function LogBookControls({ book, compact = false }: LogBookControlsProps)
           <button
             type="button"
             onClick={() => setConfirmAction("remove")}
-            className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-slate-50"
+            className="rounded-full bg-paper-raised px-2.5 py-1 text-xs font-medium text-ink-soft ring-1 ring-rule transition-colors hover:bg-paper-deep"
           >
             Remove
           </button>
           <Link href={`/compatibility?book=${book.id}`} className={linkClassName}>
-            Compatibility
+            See match
           </Link>
           {statusNote}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
+          <span className="text-[11px] font-medium uppercase tracking-wide text-ink-faint">
             Your rating
           </span>
           <StarRatingInput

@@ -1,26 +1,136 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f4f1ea;
-  --foreground: #0f172a;
+  --paper: #f3eee3;
+  --paper-raised: #fbf8f1;
+  --paper-deep: #e9dfcf;
+  --ink: #22231f;
+  --ink-soft: #5f6259;
+  --ink-faint: #7d7b70;
+  --forest: #234b3b;
+  --forest-deep: #17382c;
+  --forest-soft: #dfe8df;
+  --walnut: #7a4b2a;
+  --walnut-deep: #5f371e;
+  --walnut-soft: #eee0d2;
+  --rule: #d4c9b7;
+  --rule-strong: #b9aa94;
+  --warning: #8b5a15;
+  --warning-soft: #f7e9c9;
+  --danger: #9b3f34;
+  --danger-soft: #f4dfdc;
 }
 
+/* Expose the reading-room palette to Tailwind utilities such as bg-forest. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-paper: var(--paper);
+  --color-paper-raised: var(--paper-raised);
+  --color-paper-deep: var(--paper-deep);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-forest: var(--forest);
+  --color-forest-deep: var(--forest-deep);
+  --color-forest-soft: var(--forest-soft);
+  --color-walnut: var(--walnut);
+  --color-walnut-deep: var(--walnut-deep);
+  --color-walnut-soft: var(--walnut-soft);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-background: var(--paper);
+  --color-foreground: var(--ink);
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-newsreader);
+}
+
+html {
+  background: var(--paper);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background:
+    radial-gradient(circle at 15% -10%, rgb(255 255 255 / 55%), transparent 32rem),
+    var(--paper);
+  color: var(--ink);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #f4f1ea;
-    --foreground: #0f172a;
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-newsreader), Georgia, serif;
+  text-wrap: balance;
+}
+
+::selection {
+  background: var(--walnut-soft);
+  color: var(--walnut-deep);
+}
+
+:focus-visible {
+  outline: 2px solid var(--walnut);
+  outline-offset: 3px;
+}
+
+.reading-room-card {
+  border: 1px solid var(--rule);
+  background: color-mix(in srgb, var(--paper-raised) 96%, white);
+  box-shadow: 0 14px 35px rgb(61 46 28 / 6%);
+}
+
+.editorial-rule {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.editorial-rule::after {
+  height: 1px;
+  min-width: 2rem;
+  flex: 1;
+  content: "";
+  background: linear-gradient(90deg, var(--walnut), transparent);
+  opacity: 0.55;
+}
+
+.bookplate-mark {
+  position: relative;
+  display: inline-grid;
+  height: 2rem;
+  width: 1.55rem;
+  place-items: center;
+  border: 1px solid var(--forest);
+  border-radius: 0.2rem 0.4rem 0.4rem 0.2rem;
+  color: var(--forest);
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  box-shadow: inset 3px 0 0 var(--walnut-soft);
+}
+
+.bookplate-mark::after {
+  position: absolute;
+  right: -0.2rem;
+  bottom: 0.28rem;
+  height: 0.32rem;
+  width: 0.32rem;
+  border-radius: 999px;
+  background: var(--walnut);
+  content: "";
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }

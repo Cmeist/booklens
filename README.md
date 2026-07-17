@@ -91,10 +91,14 @@ From the repo root:
 | `make check-env` | Print paths for git, node, npm, python3, and uv |
 | `make pipeline-demo` | Run the demo data pipeline |
 | `make collect-openlibrary` | Collect real Open Library books (`BOOKLENS_CONTACT_EMAIL` or `CONTACT=...` required) |
+| `make collect-loc` | Collect an isolated Library of Congress metadata pilot (no API key) |
+| `make import-loc` | Reconcile LoC candidates against hosted data and write a dry-run audit |
 | `make pipeline-openlibrary` | Process `data/raw/openlibrary_books.csv` into processed CSVs |
 | `make enrich-openlibrary-ratings` | Fill `average_rating` / `rating_count` from Open Library work ratings |
 | `make enrich-google-books` | Enrich metadata (and secondary ratings) via Google Books API |
 | `make seed-supabase` | Upsert sample JSON into Supabase (`SUPABASE_DB_URL` required) |
+| `make tag-tests` | Run canonical tag normalization and maintenance tests |
+| `make cleanup-hosted-tags` | Audit hosted tags and write ignored reports; never writes without `APPLY=1` |
 | `make web-dev` | Start the Next.js dev server |
 | `make web-build` | Production build of the web app |
 | `make vercel-deploy` | Deploy `apps/web` to Vercel with `npx vercel --prod` |
@@ -102,7 +106,7 @@ From the repo root:
 | `make modal-refresh` | Run the Modal Open Library refresh job |
 | `make verify` | Run all MVP verification commands (see below) |
 | `make status` | Show `git status` |
-| `uv run ruff check scripts/` | Lint Python pipeline/seed scripts |
+| `uv run ruff check scripts/ tests/` | Lint Python pipeline, maintenance, and test code |
 
 From `apps/web`:
 
@@ -127,13 +131,83 @@ Defaults collect up to **120** unique works across **10** subjects (`LIMIT_TOTAL
 
 Full workflow: [`docs/LIVE_DATA_PLAN.md`](docs/LIVE_DATA_PLAN.md)
 
+### Library of Congress provider pilot
+
+The LoC collector adds a second independent seed source without invoking the general pipeline or
+rewriting committed frontend fixtures. It collects bibliographic metadata only: no OCR, PDFs,
+full text, page images, or LoC cover imagery are downloaded or displayed. Generated artifacts
+stay under ignored `data/raw/loc/` and `data/processed/loc/` directories.
+
+```bash
+# Defaults: up to 100 candidates, 20 from each of five exact subject facets.
+make collect-loc
+
+# Read the hosted catalog, classify matches/new/ambiguous records, and write audit artifacts.
+# This is read-only and requires SUPABASE_DB_URL.
+make import-loc
+```
+
+For a resumable smoke collection, use
+`LOC_LIMIT_TOTAL=10 LOC_LIMIT_PER_SUBJECT=2 RESUME=1 make collect-loc`. The importer auto-merges
+only exact provider IDs, unique ISBNs, or unique exact title/primary-author/year matches. Near or
+conflicting matches are reported and excluded.
+
+Hosted writes and restoration require separate explicit approval:
+
+```bash
+APPLY=1 make import-loc
+RESTORE=data/processed/loc/backups/pre-import-YYYYMMDDTHHMMSSZ make import-loc
+RESTORE=data/processed/loc/backups/pre-import-YYYYMMDDTHHMMSSZ APPLY=1 make import-loc
+```
+
+Normal import mode never deletes books. An approved restore can delete only the exact untouched
+LoC book IDs recorded in its validated backup manifest. See
+[`docs/LIVE_DATA_PLAN.md`](docs/LIVE_DATA_PLAN.md#library-of-congress-seeding-pilot).
+
+## Canonical tags and hosted cleanup
+
+Provider subjects are normalized into a fixed product vocabulary before they reach fixtures,
+Supabase, tag filters, taste profiles, or recommendation scoring. Each book keeps at most 16
+canonical tags. Known catalog/edition junk is classified and dropped; useful-looking labels that
+are not approved are written to `data/processed/unmapped_tags.csv` for review.
+
+The seed command normalizes tags again as a final guard and rebuilds recommendations from the
+exact normalized records being seeded. It does not trust a recommendation CSV generated before
+later enrichment steps.
+
+Hosted maintenance uses `SUPABASE_DB_URL` and is read-only by default:
+
+```bash
+# Read the entire hosted catalog and write audit artifacts under data/processed/tag_cleanup/.
+make cleanup-hosted-tags
+
+# Run only after reviewing the audit and receiving explicit production approval.
+APPLY=1 make cleanup-hosted-tags
+```
+
+An approved apply writes timestamped backups before replacing `book_tags` and
+`book_recommendations` in one transaction. It never changes `books`. Preview or apply a rollback
+with the recorded backup directory:
+
+```bash
+RESTORE=data/processed/tag_cleanup/backups/pre-cleanup-YYYYMMDDTHHMMSSZ \
+  make cleanup-hosted-tags
+
+RESTORE=data/processed/tag_cleanup/backups/pre-cleanup-YYYYMMDDTHHMMSSZ \
+  APPLY=1 make cleanup-hosted-tags
+```
+
+Restore is also dry-run by default and writes a fresh pre-restore safety backup before any approved
+write. Do not use `APPLY=1`, restore, deploy, or run a hosted refresh without explicit approval.
+
 ## Verification
 
 Run these before deploying or opening a PR:
 
 ```bash
 make pipeline-demo
-uv run ruff check scripts/
+uv run python -m unittest discover -s tests -p 'test_tag*.py'
+uv run ruff check scripts/ tests/
 cd apps/web && npm run lint
 cd apps/web && npm run build
 ```

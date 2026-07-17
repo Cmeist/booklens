@@ -572,6 +572,66 @@ select count(*) from public.book_popularity_signals;
 select provider, list_name, count(*) from public.book_popularity_signals group by provider, list_name order by count(*) desc;
 ```
 
+### Library of Congress Seeding Pilot
+
+**Status: implemented (collection and hosted dry-run ready; hosted writes opt-in).**
+
+Purpose: add a durable second seed provider without changing frontend contracts or sending LoC
+records through the fixture-producing general pipeline.
+
+Provider boundaries:
+
+- Provider key: `loc`
+- API: `https://www.loc.gov/books/` and item metadata endpoints; no API key
+- Coverage: digitized books on loc.gov, not the full Library catalog
+- Request pace: four seconds between requests (15/minute), with immediate abort on 429/CAPTCHA
+- Metadata only: never fetch full text, OCR, PDFs, page resources, or page images
+- Rights: digitized does not imply public domain; v1 stores rights/access metadata for audit and
+  leaves LoC-derived `cover_url` empty
+
+Collection:
+
+```bash
+make collect-loc
+LOC_LIMIT_TOTAL=10 LOC_LIMIT_PER_SUBJECT=2 make collect-loc
+RESUME=1 make collect-loc
+```
+
+The collector writes complete search/item responses and a per-item checkpoint under
+`data/raw/loc/`. Valid normalized candidates and collection reports go under
+`data/processed/loc/`. A candidate requires title, contributor, publication year, and at least one
+canonical tag. Unmapped source headings remain in the report and never become product tags.
+
+Hosted reconciliation is read-only by default:
+
+```bash
+make import-loc
+```
+
+Matching precedence is exact LoC provider ID, unique normalized ISBN, then a unique exact
+title/primary-author-token/publication-year tuple. Near-year, conflicting, and multiple matches are
+excluded as ambiguous. Existing canonical IDs and primary sources are preserved; LoC fills only
+missing description/year/decade/cover fields, adds canonical tags, and records provenance/ISBNs.
+New LoC books have null page count, ratings, and cover.
+
+The dry run writes classifications, diffs, ambiguous matches, unmapped tags, recommendation counts,
+and before/after catalog fingerprints. It recomputes recommendations from the complete proposed
+hosted catalog. An apply is blocked unless at least 25 actionable candidates span at least three
+seed subjects.
+
+Do not run either command below without explicit hosted-data approval:
+
+```bash
+APPLY=1 make import-loc
+RESTORE=data/processed/loc/backups/pre-import-YYYYMMDDTHHMMSSZ APPLY=1 make import-loc
+```
+
+An approved import writes a checksum-protected backup, rechecks the catalog fingerprint inside one
+transaction, and never deletes books. Restore is also dry-run by default. It refuses to proceed if
+the catalog differs from the exact post-import state, or if an inserted book gained non-LoC
+provenance, ISBNs, or popularity rows. Restore deletion is limited to inserted IDs recorded by that
+manifest.
+
 ### Phase 14: Refresh Workflow
 
 Goal: make repeat imports boring and safe.
